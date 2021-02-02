@@ -1,24 +1,33 @@
-options = ddeset('AbsTol', 1e-9, 'RelTol', 1e-7, 'Jumps', 0);
+options = ddeset('AbsTol', 1e-9, 'RelTol', 1e-7, 'Jumps', [0]);
 
-T = 1;
+% xh0 = -1;
+% T = 1;
 % tau = 0.1;
 % K0 = 1;
 % K1 = 14;
 % sol = dde23(@(t,y,z) -K0*y-K1*z, [tau],@(t) xh0,[0,T], options);
 
+% tau = 0.5;
+% K0 = 1;
+% K1 = 2;
 
-tau = 0.3;
-K0 = 1;
-K1 = 5;
+T = 2;
+tau = 0.2;
+K0 = 0;
+K1 = 7;
 sol = dde23(@(t,y,z) -K0*y-K1*z, [tau],@(t) xh0,[0,T], options);
 
 
-figure(1)
+figure(5)
 clf
 hold on
 plot([-tau sol.x], [-1 sol.y])
 plot([-tau, T], [0, 0], ':k')
 xlim([-tau, T])
+ylim(abs(xh0)*1.1*[-1, 1])
+xlabel('t')
+ylabel('x(t)')
+title(['$\dot{x}(t) = -', num2str(K0), 'x(t) -', num2str(K1), 'x(t-', num2str(tau),')$'], 'interpreter', 'latex', 'fontsize', 16)
 hold off
 
 

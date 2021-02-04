@@ -13,6 +13,12 @@ kappa = 0.4;  %delay x(t - tau)
 K0 = 1;     %gain in dynamics x(t)
 K1 = 4;     %gain in dynamics x(t-tau)
 
+% kappa = 0.2;  %delay x(t - tau)
+% K0 = 1;     %gain in dynamics x(t)
+% K1 = 2;     %gain in dynamics x(t-tau)
+% 
+
+
 % tau = 0;
 order = 6;      %relaxation order
 

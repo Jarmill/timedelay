@@ -1,7 +1,11 @@
-options = ddeset('AbsTol', 1e-9, 'RelTol', 1e-7);
+options = ddeset('AbsTol', 1e-10, 'RelTol', 1e-7);
 
-T = 10;
-sol = ddesd(@ddex,@curr_delay,@history,[0,T], options);
+T = 1;
+xh0 = -1;
+kappa = 0.2;
+K0 = 3;
+K1 = 3;
+sol = ddesd(@(t, y, z) -K0*y - K1*z,@(t, y) kappa*t,@(t) xh0,[0,T], options);
 
 figure(1)
 clf
@@ -11,27 +15,19 @@ plot([0, T], [0, 0], ':k')
 hold off
 
 
-function d = curr_delay(t,y)
-%DDEX1DELAYS  Delays for using with DDEX1DE.
+% function d = curr_delay(t,y)
+% %DDEX1DELAYS  Delays for using with DDEX1DE.
+% 
+% d = [ 0.2 * t];
+% % d = t - 1;
+% end
 
-d = [ 0.2 * t];
-% d = t - 1;
-end
+% function y = history(t)
+%     y = -1;
+% end
 
-function y = history(t)
-    y = -2;
-end
-
-function dydt = ddex(t,y,Z)
-%DDEX1DE  Example of delay differential equations for solving with DDE23.
-%
-%   See also DDE23.
-
-%   Jacek Kierzenka, Lawrence F. Shampine and Skip Thompson
-%   Copyright 1984-2014 The MathWorks, Inc.
-K = 5;
-ylag = Z(:,1);
-dydt = K*(-0.5*ylag(1) - y(1));
-% dydt = 0.5*y(1) - ylag(1);
-% dydt = -ylag(1);
-end
+% function dydt = ddex(t,y,Z)
+% ylag = Z(:,1);
+% dydt = -3*y(1) - 3*ylag(1);
+% % dydt = -ylag(1);
+% end

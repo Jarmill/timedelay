@@ -6,16 +6,16 @@
 %         Feb 3, 2021.
 
 %% parameters
-PLOT = 0;
+PLOT = 1;
 T = 1;      %time horizon
 xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
-kappa = 0.4;  %delay x(t - tau)
+kappa = 0.5;  %delay x(t - tau)
 K0 = 1;     %gain in dynamics x(t)
-K1 = 4;     %gain in dynamics x(t-tau)
+K1 = 3;     %gain in dynamics x(t-tau)
 
 p = @(x) x;
 
-order = 3;      %relaxation order
+order = 4;      %relaxation order
 
 %% plot the trajectory
 options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9);
@@ -102,7 +102,7 @@ mn1_scale= (1/kappa)* subs(mn1, tn1, tn1/kappa);
 phi1 = mom(v1) + mom(mmon([tn1c; xn1c], d)) -  mom(mn1_scale);
 
 %% moment constraints
-mom_con = [Liou == 0;        %Liouville
+mom_con = [-Liou == 0;        %Liouville
            -phi0 == 0;        %x(t)
            -phi1 == 0];       %x(kappa t)           
 
@@ -151,41 +151,70 @@ Mp_1 = Mp(1:3, 1:3);
 rp = rank(Mp_1);
 
 %nonnegative functions (hopefully)
+%mup
 nonneg_cost = v_f(t_traj, x0_traj) - p(x0_traj);
-nonneg_flow = -(v_f(t_traj, x0_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
+
+%mu
+nonneg_flow = (v_f(t_traj, x0_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
+
+% nonneg_flow = -(v_f(t_traj, x0_traj)) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj);
+%nu0
 tnu0_traj = linspace(kappa*T, T, floor(Nt/4));
 xnu0_traj = ppval(ci, tnu0_traj);
 nonneg_0    = phi0_f(tnu0_traj, xnu0_traj);
 
+%nu1
 tnu1_traj = linspace(0, kappa*T, Nt);
 xnu1_traj = ppval(ci, tnu1_traj);
 nonneg_1    = phi0_f(tnu1_traj, xnu1_traj) + phi1_f(tnu1_traj/kappa, xnu1_traj)/kappa;
 
+%nu1c
+nonneg_1c = -phi1_f(tnu1_traj, xnu1_traj);
 
 if PLOT
     figure(2)
     clf
 %     tiledlayout(3, 1)
 %     nexttile
-    subplot(4,1,1)
+    subplot(5,1,1)
     plot(t_traj, nonneg_flow)
-    title('$-(L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\mu: \quad -(L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
     
 %     nexttile
-    subplot(4,1,2)
+    subplot(5,1,2)
     plot(tnu1_traj, nonneg_1)
-    title('$\phi_0(t, x) + \kappa^{-1} \phi_1(\kappa^{-1} t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\nu_1: \quad \phi_0(t, x) + \kappa^{-1} \phi_1(\kappa^{-1} t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     xlabel('time')
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
+    
+        
+    subplot(5,1,3)
+    plot(tnu1_traj, nonneg_1c)
+    title('$\hat{\nu}_1: \quad\phi_1(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
     
     
-%     nexttile
-    subplot(4,1,3)
+    subplot(5,1,4)
     plot(tnu0_traj, nonneg_0)
-    title('$\phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\nu_0: \quad \phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
     
-    subplot(4, 1, 4 )
+    subplot(5, 1, 5 )
     plot(t_traj, nonneg_cost)
-    title('$v(t, x) - p(x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\mu_p: \quad v(t, x) - p(x)$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
+    
 %     figure(3)
 %     semilogy((abs(m_traj - m_mom)), 'o')
 %     title('Error in moment estimation')

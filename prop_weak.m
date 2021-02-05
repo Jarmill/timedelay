@@ -9,9 +9,9 @@
 PLOT = 1;
 T = 1;      %time horizon
 xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
-kappa = 0.3;  %delay x(t - tau)
-K0 = 3;     %gain in dynamics x(t)
-K1 = 2;     %gain in dynamics x(t-tau)
+kappa = 0.5;  %delay x(t - tau)
+K0 = 1;     %gain in dynamics x(t)
+K1 = 3;     %gain in dynamics x(t-tau)
 
 % kappa = 0.2;  %delay x(t - tau)
 % K0 = 1;     %gain in dynamics x(t)
@@ -101,9 +101,9 @@ phi1 = mom(v1) - mom(mn1_scale);
 % mom_con = [Liou == 0;        %Liouville
 %            phi0 == 0;        %x(t)
 %            phi1 == 0];       %x(kappa t)       
-mom_con = [Liou == 0;        %Liouville
-           phi0 == 0;        %x(t)
-           phi1 == 0];       %x(kappa t)       
+mom_con = [-Liou == 0;        %Liouville
+           -phi0 == 0;        %x(t)
+           -phi1 == 0];       %x(kappa t)       
 
 
 %% Solve problem
@@ -155,9 +155,10 @@ t_traj = linspace(0, T, Nt);
 x0_traj = ppval(ci, t_traj);
 x1_traj = ppval(ci, t_traj*kappa);
 
+%I'm not sure about this sign
 nonneg_T = v_f(T, x0_traj(end));
 
-nonneg_flow = -(v_f(t_traj, x0_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
+nonneg_flow = -(-v_f(t_traj, x0_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
 tnu0_traj = linspace(kappa*T, T, floor(Nt/4));
 xnu0_traj = ppval(ci, tnu0_traj);
 nonneg_0    = phi0_f(tnu0_traj, xnu0_traj);
@@ -183,20 +184,27 @@ if PLOT
 %     nexttile
     subplot(3,1,1)
     plot(t_traj, nonneg_flow)
-    title('$-(L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\mu: \ -(L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
     
 %     nexttile
     subplot(3,1,2)
     plot(tnu1_traj, nonneg_1)
-    title('$\phi_0(t, x) + \kappa^{-1} \phi_1(\kappa^{-1} t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\nu_0: \ \phi_0(t, x) + \kappa^{-1} \phi_1(\kappa^{-1} t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     xlabel('time')
-    
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
     
 %     nexttile
     subplot(3,1,3)
     plot(tnu0_traj, nonneg_0)
-    title('$\phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
-    
+    title('$\nu_1: \ \phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
 
 end
 

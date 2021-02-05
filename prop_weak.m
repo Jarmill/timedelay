@@ -9,9 +9,9 @@
 PLOT = 1;
 T = 1;      %time horizon
 xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
-kappa = 0.4;  %delay x(t - tau)
-K0 = 1;     %gain in dynamics x(t)
-K1 = 4;     %gain in dynamics x(t-tau)
+kappa = 0.3;  %delay x(t - tau)
+K0 = 3;     %gain in dynamics x(t)
+K1 = 2;     %gain in dynamics x(t-tau)
 
 % kappa = 0.2;  %delay x(t - tau)
 % K0 = 1;     %gain in dynamics x(t)
@@ -84,7 +84,7 @@ Liou = Ay + y0 - mom(yT);
 
 %(t, x0) marginal
 %test functions on components (t)^alpha x^beta
-phi0 = mom(v0) - mom(mmon([tn1; xn1], d)) - mom(mmon([tn0; xn0], d));
+phi0 = mom(v0) -mom(mmon([tn1; xn1], d)) - mom(mmon([tn0; xn0], d));
 
 %(t, x1) marginal (with shifting)
 %test functions on components (1/kappa) (t/kappa)^alpha x^beta
@@ -102,8 +102,8 @@ phi1 = mom(v1) - mom(mn1_scale);
 %            phi0 == 0;        %x(t)
 %            phi1 == 0];       %x(kappa t)       
 mom_con = [Liou == 0;        %Liouville
-           -phi0 == 0;        %x(t)
-           -phi1 == 0];       %x(kappa t)       
+           phi0 == 0;        %x(t)
+           phi1 == 0];       %x(kappa t)       
 
 
 %% Solve problem
@@ -155,6 +155,8 @@ t_traj = linspace(0, T, Nt);
 x0_traj = ppval(ci, t_traj);
 x1_traj = ppval(ci, t_traj*kappa);
 
+nonneg_T = v_f(T, x0_traj(end));
+
 nonneg_flow = -(v_f(t_traj, x0_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
 tnu0_traj = linspace(kappa*T, T, floor(Nt/4));
 xnu0_traj = ppval(ci, tnu0_traj);
@@ -166,6 +168,15 @@ nonneg_1    = phi0_f(tnu1_traj, xnu1_traj) + phi1_f(tnu1_traj/kappa, xnu1_traj)/
 
 
 if PLOT
+    
+        
+    figure(3)
+    semilogy((abs(m_traj - m_mom)), 'o')
+    title('Error in moment estimation')
+    xlabel('moment index')
+    ylabel('$\mid m_{\alpha \beta} - \hat{m}_{\alpha \beta} \mid$', 'interpreter', 'latex', 'fontsize', 14) 
+    grid on
+    
     figure(2)
     clf
 %     tiledlayout(3, 1)
@@ -186,13 +197,7 @@ if PLOT
     plot(tnu0_traj, nonneg_0)
     title('$\phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     
-    
-    figure(3)
-    semilogy((abs(m_traj - m_mom)), 'o')
-    title('Error in moment estimation')
-    xlabel('moment index')
-    ylabel('$\mid m_{\alpha \beta} - \hat{m}_{\alpha \beta} \mid$', 'interpreter', 'latex', 'fontsize', 14) 
-    grid on
+
 end
 
 

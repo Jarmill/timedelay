@@ -5,15 +5,20 @@
 %         Feb 2, 2021.
 
 %% parameters
-PLOT = 0;
+PLOT = 1;
 T = 1.2;      %time horizon
 xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
+% tau = 0.2;  %delay x(t - tau)
+% K0 = 1;     %gain in dynamics x(t)
+% K1 = 5;     %gain in dynamics x(t-tau)
+
 tau = 0.2;  %delay x(t - tau)
-K0 = 1;     %gain in dynamics x(t)
-K1 = 5;     %gain in dynamics x(t-tau)
+K0 = 2;     %gain in dynamics x(t)
+K1 = 3;     %gain in dynamics x(t-tau)
+
 
 % tau = 0;
-order = 8;      %relaxation order
+order = 7;      %relaxation order
 
 %% plot the trajectory
 options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9, 'Jumps', 0);
@@ -77,6 +82,7 @@ v0  = mmon([t; x0], d);
 f = -K0*x0 -K1*x1; %dynamics
 Ay = mom(diff(v0, t) + diff(v0, x0)*f); 
 Liou = Ay + y0 - mom(yT);
+% Liou = -(Ay + y0) + mom(yT);
 
 %(t, x0) marginal
 %test functions on components (t)^alpha x^beta
@@ -154,7 +160,10 @@ t_traj = linspace(0, T, Nt);
 x0_traj = ppval(ci, t_traj);
 x1_traj = ppval(ci, t_traj - tau);
 
+nonneg_T = v_f(T, x0_traj(end));
+
 nonneg_flow = -(v_f(t_traj, x0_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
+
 tnu0_traj = linspace(0, T-tau, Nt);
 xnu0_traj = ppval(ci, tnu0_traj);
 nonneg_0    = phi0_f(tnu0_traj, xnu0_traj) + phi1_f(tnu0_traj + tau, xnu0_traj);
@@ -165,6 +174,14 @@ nonneg_1    = phi0_f(tnu1_traj, xnu1_traj);
 
 
 if PLOT
+    
+    figure(3)
+    semilogy((abs(m_traj - m_mom)), 'o')
+    title('Error in moment estimation')
+    xlabel('moment index')
+    ylabel('$\mid m_{\alpha \beta} - \hat{m}_{\alpha \beta} \mid$', 'interpreter', 'latex', 'fontsize', 14) 
+    grid on
+    
     figure(2)
     clf
 %     tiledlayout(3, 1)
@@ -184,12 +201,7 @@ if PLOT
     title('$\phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     xlabel('time')
     
-    figure(3)
-    semilogy((abs(m_traj - m_mom)), 'o')
-    title('Error in moment estimation')
-    xlabel('moment index')
-    ylabel('$\mid m_{\alpha \beta} - \hat{m}_{\alpha \beta} \mid$', 'interpreter', 'latex', 'fontsize', 14) 
-    grid on
+
 end
 
 

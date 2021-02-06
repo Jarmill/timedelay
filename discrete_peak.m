@@ -9,18 +9,14 @@ PLOT = 1;
 PLOT_NONNEG = 1;
 T = 1;      %time horizon
 xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
-% tau = 0.2;  %delay x(t - tau)
-% K0 = 1;     %gain in dynamics x(t)
-% K1 = 5;     %gain in dynamics x(t-tau)
-% 
-% tau = 0.4;  %delay x(t - tau)
-% K0 = 2;     %gain in dynamics x(t)
-% K1 = 3;     %gain in dynamics x(t-tau)
+tau = 0.2;  %delay x(t - tau)
+K0 = 1;     %gain in dynamics x(t)
+K1 = 5;     %gain in dynamics x(t-tau)
 
-T = 1;
-tau = 0.4;
-K0 = 1;
-K1 = 3;
+% T = 1;
+% tau = 0.4;
+% K0 = 1;
+% K1 = 3;
 
 % tau = 0;
 order = 4;      %relaxation order
@@ -66,9 +62,8 @@ mpol('tnp', 'xnp'); nup = meas(tnp, xnp);   %component  1
 mpol('tnpc', 'xn1c'); nunc = meas(tnpc, xn1c);   %component 1 [0, kappa T] complement
 
 %support constraints
-% tp*(T-tp) == T; 
 % tp == T
-supp_con = [tp*(T-tp) == T; 
+supp_con = [tp*(T-tp) >= 0; 
             tnz*((T - tau) - tnz) >= 0; 
             (tnp  - (T - tau)) * (T - tnp)  >= 0;
             tnpc * (T - tnpc) >= 0;
@@ -125,8 +120,8 @@ phi1 = mom(v1) + yc - mom(mnz_shift) - mom(mnn_shift);
 
 %% moment constraints
 mom_con = [Liou == 0;        %Liouville
-           phi0 == 0;        %x(t)
-           phi1 == 0;        %x(t - tau)
+           -phi0 == 0;        %x(t)
+           -phi1 == 0;        %x(t - tau)
            mom(mnn) == yh];  %history given
 
 %% Solve problem
@@ -181,7 +176,10 @@ coeff_v    = dual_rec_1(1:n_monom);
 coeff_phi0 = dual_rec_1(n_monom + (1:n_monom));
 coeff_phi1 = dual_rec_1(2*n_monom + (1:n_monom));
 
-v_f    = @(te, xe) eval(coeff_v'*v0, [t; x0], [te; xe]);
+v_rec = coeff_v'*v0;
+Lv_rec = diff(v_rec, t) + f * diff(v_rec, x0);
+v_f    = @(te, xe) eval(v_rec, [t; x0], [te; xe]);
+Lv_f    = @(te, x0e, x1e) eval(Lv_rec, [t; x0; x1], [te; x0e; x1e]);
 phi0_f = @(te, xe) eval(coeff_phi0'*v0, [t; x0], [te; xe]);
 phi1_f = @(te, xe) eval(coeff_phi1'*v0, [t; x0], [te; xe]);
 
@@ -201,8 +199,9 @@ x1_traj = ppval(ci, t_traj - tau);
 
 % nonneg_T = v_f(T, x0_traj(end));
 
-nonneg_cost = v_f(t_traj, x0_traj) - p(x0_traj);
+nonneg_cost = v_f(t_traj, x0_traj) + p(x0_traj);
 
+%not V, Lie V!
 nonneg_flow = -(v_f(t_traj, x0_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
 
 tnu0_traj = linspace(0, T-tau, Nt);
@@ -213,11 +212,11 @@ tnu1_traj = linspace(T-tau, T, floor(Nt/4));
 xnu1_traj = ppval(ci, tnu1_traj);
 nonneg_1    = phi0_f(tnu1_traj, xnu1_traj);
 
-nonneg_1c = phi1_f(tnu1_traj, xnu1_traj);
+nonneg_1c = -phi1_f(t_traj, x0_traj);
 
 if PLOT
     hold on
-    scatter(t_traj(i_traj), x0_traj(i_traj), 120, '*r')
+    scatter(t_traj(i_traj), x0_traj(i_traj), 300, '*r')
     plot(xlim, obj_rec*[1, 1], '-.r', 'LineWidth', 3)
     hold off
 end
@@ -236,7 +235,7 @@ end
 %     nexttile
     subplot(5,1,2)
     plot(tnu1_traj, nonneg_1)
-    title('$\nu_1: \quad \phi_0(t, x) + \kappa^{-1} \phi_1(\kappa^{-1} t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\nu_0: \quad \phi_0(t, x) + \phi_1(t + \tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
     xlabel('time')
     hold on
     plot(xlim, [0, 0], ':k')
@@ -244,8 +243,8 @@ end
     
         
     subplot(5,1,3)
-    plot(tnu1_traj, nonneg_1c)
-    title('$\hat{\nu}_1: \quad\phi_1(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    plot(t_traj, nonneg_1c)
+    title('$\hat{\nu}_1: \quad -\phi_1(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
     hold off
@@ -253,14 +252,14 @@ end
     
     subplot(5,1,4)
     plot(tnu0_traj, nonneg_0)
-    title('$\nu_0: \quad \phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\nu_1: \quad \phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
     hold off
     
     subplot(5, 1, 5 )
     plot(t_traj, nonneg_cost)
-    title('$\mu_p: \quad v(t, x) - p(x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\mu_p: \quad v(t, x) + p(x)$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
     hold off

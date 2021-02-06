@@ -137,7 +137,10 @@ coeff_v    = dual_rec_1(1:n_monom);
 coeff_phi0 = dual_rec_1(n_monom + (1:n_monom));
 coeff_phi1 = dual_rec_1(2*n_monom + (1:n_monom));
 
-v_f    = @(te, xe) eval(coeff_v'*v0, [t; x0], [te; xe]);
+v_rec = coeff_v'*v0;
+Lv_rec = diff(v_rec, t) + f * diff(v_rec, x0);
+v_f    = @(te, xe) eval(v_rec, [t; x0], [te; xe]);
+Lv_f    = @(te, x0e, x1e) eval(Lv_rec, [t; x0; x1], [te; x0e; x1e]);
 phi0_f = @(te, xe) eval(coeff_phi0'*v0, [t; x0], [te; xe]);
 phi1_f = @(te, xe) eval(coeff_phi1'*v0, [t; x0], [te; xe]);
 
@@ -158,7 +161,7 @@ x1_traj = ppval(ci, t_traj*kappa);
 %I'm not sure about this sign
 nonneg_T = v_f(T, x0_traj(end));
 
-nonneg_flow = -(-v_f(t_traj, x0_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
+nonneg_flow = -(-Lv_f(t_traj, x0_traj, x1_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
 tnu0_traj = linspace(kappa*T, T, floor(Nt/4));
 xnu0_traj = ppval(ci, tnu0_traj);
 nonneg_0    = phi0_f(tnu0_traj, xnu0_traj);
@@ -205,6 +208,13 @@ if PLOT
     hold on
     plot(xlim, [0, 0], ':k')
     hold off
+    
+    figure(4)
+    plot(t_traj, v_f(t_traj, x0_traj))
+    xlabel('time')
+    title('Value function over time', 'fontsize', 16)
+    ylabel('$v(t, x)$', 'interpreter', 'latex')
+
 
 end
 

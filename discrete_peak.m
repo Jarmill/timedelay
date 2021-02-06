@@ -1,5 +1,6 @@
-% Estimate moments of a trajectory solving a delay differential equation
-% x'(t) = -K0 x (t) -K1 x(t - tau) where the state history is constant
+% Peak estimation on trajectories of a delay differential equation
+% x'(t) = -K0 x(t) -K1 x(t - tau) where the state history is constant
+% the objective is to maximize is p(x)
 %
 % Author: Jared Miller
 %         Feb 2, 2021.
@@ -9,19 +10,30 @@ PLOT = 1;
 PLOT_NONNEG = 1;
 T = 1;      %time horizon
 xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
-tau = 0.2;  %delay x(t - tau)
+tau = 0.4;  %delay x(t - tau)
 K0 = 1;     %gain in dynamics x(t)
-K1 = 5;     %gain in dynamics x(t-tau)
-
-% T = 1;
-% tau = 0.4;
-% K0 = 1;
+K1 = 4;     %gain in dynamics x(t-tau)
+order = 4;
+% tau = 0.3;
+% K0 = 0.5;
 % K1 = 3;
 
-% tau = 0;
-order = 4;      %relaxation order
+% T = 1.5;
+% tau = 0.25;
+% K0 = 3;
+% K1 = 5;
+% order = 8;      %relaxation order
 
-p = @(x) x;
+
+% tau = 0.1;
+% K0 = 1;
+% K1 = 10;
+% order = 8;      %relaxation order
+
+
+% tau = 0;
+
+p = @(x) x;     %objective in peak estimation
 
 
 %% plot the trajectory
@@ -39,7 +51,7 @@ if PLOT
     figure(1)
     clf
     hold on
-    plot([-tau sol.x], [-1 sol.y])
+    plot([-tau sol.x], [-1 sol.y], 'DisplayName', 'trajectory')
     plot([-tau, T], [0, 0], ':k')
     xlim([-tau, T])
     hold off
@@ -92,7 +104,7 @@ v0  = mmon([t; x0], d);
 f = -K0*x0 -K1*x1; %dynamics
 Ay = mom(diff(v0, t) + diff(v0, x0)*f); 
 Liou = Ay + y0 - mom(yp);
-% Liou = -(Ay + y0) + mom(yT);
+% Liou = -(Ay + y0) + mom(yp);
 
 %(t, x0) marginal
 %test functions on components (t)^alpha x^beta
@@ -119,7 +131,7 @@ phi1 = mom(v1) + yc - mom(mnz_shift) - mom(mnn_shift);
 
 
 %% moment constraints
-mom_con = [Liou == 0;        %Liouville
+mom_con = [-Liou == 0;        %Liouville
            -phi0 == 0;        %x(t)
            -phi1 == 0;        %x(t - tau)
            mom(mnn) == yh];  %history given
@@ -136,37 +148,11 @@ P = msdp(objective, ...
 [status,obj_rec, m,dual_rec]= msol(P);
 obj_rec
 
-%trajectory interpolator
-ci = spline(sol.x, sol.y);
-ci.pieces = ci.pieces + 1;
-ci.breaks = [-1 ci.breaks];
-ci.coefs = [zeros(1, size(ci.coefs, 2)-1) xh0; ci.coefs];
-
-
-Nt = 400;
-t_traj = linspace(0, T, Nt);
-x0_traj = ppval(ci, t_traj);
-x1_traj = ppval(ci, t_traj-tau);
 
 %peak extraction/estimation
-[peak_traj,  i_traj] = max(p(x0_traj));
 Mp = double(mmat(mup));
 Mp_1 = Mp(1:3, 1:3);
-rp = rank(Mp_1);
-
-%% Dual Variables
-
-dual_rec_1 = dual_rec{1};
-n_monom = length(Ay);
-coeff_v    = dual_rec_1(1:n_monom);
-coeff_phi0 = dual_rec_1(n_monom + (1:n_monom));
-coeff_phi1 = dual_rec_1(2*n_monom + (1:n_monom));
-
-v_f    = @(te, xe) eval(coeff_v'*v0, [t; x0], [te; xe]);
-phi0_f = @(te, xe) eval(coeff_phi0'*v0, [t; x0], [te; xe]);
-phi1_f = @(te, xe) eval(coeff_phi1'*v0, [t; x0], [te; xe]);
-
-% disp(['Norm Gap between empirical and LMI moments = ', num2str(norm_diff)])
+rp = rank(Mp_1, 1e-3);
 
 %% Dual Functions
 
@@ -188,21 +174,20 @@ phi1_f = @(te, xe) eval(coeff_phi1'*v0, [t; x0], [te; xe]);
 %trajectory interpolator
 ci = spline(sol.x, sol.y);
 ci.pieces = ci.pieces + 1;
-ci.breaks = [-1 ci.breaks];
+ci.breaks = [-tau ci.breaks];
 ci.coefs = [zeros(1, size(ci.coefs, 2)-1) xh0; ci.coefs];
 
-
-Nt = 400;
+Nt = 1000;
 t_traj = linspace(0, T, Nt);
 x0_traj = ppval(ci, t_traj);
 x1_traj = ppval(ci, t_traj - tau);
+[peak_traj,  i_traj] = max(p(x0_traj));
 
 % nonneg_T = v_f(T, x0_traj(end));
 
-nonneg_cost = v_f(t_traj, x0_traj) + p(x0_traj);
+nonneg_cost = v_f(t_traj, x0_traj) - p(x0_traj);
 
-%not V, Lie V!
-nonneg_flow = -(v_f(t_traj, x0_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
+nonneg_flow = -(Lv_f(t_traj, x0_traj, x1_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
 
 tnu0_traj = linspace(0, T-tau, Nt);
 xnu0_traj = ppval(ci, tnu0_traj);
@@ -216,17 +201,19 @@ nonneg_1c = -phi1_f(t_traj, x0_traj);
 
 if PLOT
     hold on
-    scatter(t_traj(i_traj), x0_traj(i_traj), 300, '*r')
-    plot(xlim, obj_rec*[1, 1], '-.r', 'LineWidth', 3)
+    scatter(t_traj(i_traj), x0_traj(i_traj), 300, '*r', 'DisplayName', 'true peak')
+    plot(xlim, obj_rec*[1, 1], '-.r', 'LineWidth', 3, 'DisplayName', 'recovered peak')
     hold off
+    legend('location', 'southeast')
 end
     
- if PLOT || PLOT_NONNEG    
+ if  PLOT_NONNEG    
     figure(2)
     clf
 %     tiledlayout(3, 1)
     subplot(5,1,1)
     plot(t_traj, nonneg_flow)
+    xlim([0, T])
     title('$\mu: \quad -(L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
@@ -234,7 +221,8 @@ end
     
 %     nexttile
     subplot(5,1,2)
-    plot(tnu1_traj, nonneg_1)
+    plot(tnu0_traj, nonneg_0)
+    xlim([0, T - tau])
     title('$\nu_0: \quad \phi_0(t, x) + \phi_1(t + \tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
     xlabel('time')
     hold on
@@ -244,6 +232,7 @@ end
         
     subplot(5,1,3)
     plot(t_traj, nonneg_1c)
+    xlim([0, T])
     title('$\hat{\nu}_1: \quad -\phi_1(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
@@ -251,7 +240,8 @@ end
     
     
     subplot(5,1,4)
-    plot(tnu0_traj, nonneg_0)
+    plot(tnu1_traj, nonneg_1)
+    xlim([T-tau, T])
     title('$\nu_1: \quad \phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
@@ -259,7 +249,8 @@ end
     
     subplot(5, 1, 5 )
     plot(t_traj, nonneg_cost)
-    title('$\mu_p: \quad v(t, x) + p(x)$', 'interpreter', 'latex', 'fontsize', 14)
+    xlim([0, T])
+    title('$\mu_p: \quad v(t, x) - p(x)$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
     hold off

@@ -1,25 +1,31 @@
 % Estimate moments of a trajectory solving a delay differential equation
-% x'(t) = -K0 x (t) -K1 x(t - tau) where the state history is constant
+% x'(t) = -K0 x(t) -K1 x(t - tau) where the state history is constant
 %
 % Author: Jared Miller
 %         Feb 2, 2021.
 
 %% parameters
-PLOT = 0;
+PLOT = 1;
 PLOT_NONNEG = 1;
-T = 1.2;      %time horizon
+T = 1;      %time horizon
 xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
-% tau = 0.2;  %delay x(t - tau)
-% K0 = 1;     %gain in dynamics x(t)
-% K1 = 5;     %gain in dynamics x(t-tau)
+tau = 0.4;  %delay x(t - tau)
+K0 = 1;     %gain in dynamics x(t)
+K1 = 4;     %gain in dynamics x(t-tau)
 
-tau = 0.2;  %delay x(t - tau)
-K0 = 2;     %gain in dynamics x(t)
-K1 = 3;     %gain in dynamics x(t-tau)
+% tau = 0.3;
+% K0 = 0.5;
+% K1 = 3;
 
+% T = 1.5;
+% tau = 0.25;
+% K0 = 3;
+% K1 = 5;
 
-% tau = 0;
-order = 5;      %relaxation order
+% tau = 0.1;
+% K0 = 1;
+% K1 = 10;
+order = w6;      %relaxation order
 
 %% plot the trajectory
 options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9, 'Jumps', 0);
@@ -107,9 +113,9 @@ phi1 = mom(v1) - mom(mnz_shift) - mom(mnn_shift);
 
 
 %% moment constraints
-mom_con = [Liou == 0;        %Liouville
-           phi0 == 0;        %x(t)
-           phi1 == 0;        %x(t - tau)
+mom_con = [-Liou == 0;        %Liouville
+           -phi0 == 0;        %x(t)
+           -phi1 == 0;        %x(t - tau)
            mom(mnn) == yh];  %history given
 
 %% Solve problem
@@ -143,7 +149,11 @@ coeff_v    = dual_rec_1(1:n_monom);
 coeff_phi0 = dual_rec_1(n_monom + (1:n_monom));
 coeff_phi1 = dual_rec_1(2*n_monom + (1:n_monom));
 
-v_f    = @(te, xe) eval(coeff_v'*v0, [t; x0], [te; xe]);
+v_rec = coeff_v'*v0;
+Lv_rec = diff(v_rec, t) + f * diff(v_rec, x0);
+v_f    = @(te, xe) eval(v_rec, [t; x0], [te; xe]);
+Lv_f    = @(te, x0e, x1e) eval(Lv_rec, [t; x0; x1], [te; x0e; x1e]);
+
 phi0_f = @(te, xe) eval(coeff_phi0'*v0, [t; x0], [te; xe]);
 phi1_f = @(te, xe) eval(coeff_phi1'*v0, [t; x0], [te; xe]);
 
@@ -152,7 +162,7 @@ phi1_f = @(te, xe) eval(coeff_phi1'*v0, [t; x0], [te; xe]);
 %trajectory interpolator
 ci = spline(sol.x, sol.y);
 ci.pieces = ci.pieces + 1;
-ci.breaks = [-1 ci.breaks];
+ci.breaks = [-tau ci.breaks];
 ci.coefs = [zeros(1, size(ci.coefs, 2)-1) xh0; ci.coefs];
 
 
@@ -163,7 +173,7 @@ x1_traj = ppval(ci, t_traj - tau);
 
 nonneg_T = v_f(T, x0_traj(end));
 
-nonneg_flow = -(v_f(t_traj, x0_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
+nonneg_flow = -(Lv_f(t_traj, x0_traj, x1_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
 
 tnu0_traj = linspace(0, T-tau, Nt);
 xnu0_traj = ppval(ci, tnu0_traj);
@@ -192,18 +202,24 @@ end
 %     nexttile
     plot(t_traj, nonneg_flow)
     title('$-(L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
-    
+    xlim([0, T])
 %     nexttile
     subplot(3,1,2)
     plot(tnu0_traj, nonneg_0)
     title('$\phi_0(t, x) + \phi_1(t+\tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
-    
+    xlim([0, T-tau])
 %     nexttile
     subplot(3,1,3)
     plot(tnu1_traj, nonneg_1)
     title('$\phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     xlabel('time')
+    xlim([T-tau, T])
     
+    figure(4)
+    plot(t_traj, v_f(t_traj, x0_traj))
+    xlabel('time')
+    title('Value function over time', 'fontsize', 16)
+    ylabel('$v(t, x)$', 'interpreter', 'latex')
 
 end
 

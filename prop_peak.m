@@ -55,7 +55,7 @@ mpol('tn1c', 'xn1c'); nunc = meas(tn1c, xn1c);   %component 1 [0, kappa T] compl
 %support constraints
 supp_con = [tp*(T - tp) >= 0; 
             tn1*(kappa*T - tn1) >= 0; 
-            tn1c*(kappa*T - tn1c) >= 0; 
+            tn1c*(T - tn1c) >= 0; 
             (tn0 - kappa*T) * (T - tn0) >= 0;
             t*(T - t) >= 0;            
             x0^2 <= xh0^2;
@@ -169,7 +169,7 @@ xnu1_traj = ppval(ci, tnu1_traj);
 nonneg_1    = phi0_f(tnu1_traj, xnu1_traj) + phi1_f(tnu1_traj/kappa, xnu1_traj)/kappa;
 
 %nu1c
-nonneg_1c = -phi1_f(tnu1_traj, xnu1_traj);
+nonneg_1c = -phi1_f(tnu1_traj/kappa, xnu1_traj)/kappa;
 
 if PLOT
     figure(2)

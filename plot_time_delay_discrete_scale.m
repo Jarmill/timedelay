@@ -11,10 +11,10 @@ options = ddeset('AbsTol', 1e-9, 'RelTol', 1e-7, 'Jumps', [0]);
 % K0 = 1;
 % K1 = 2;
 
-T = 2;
-tau = 0.2;
-K0 = 0;
-K1 = 7;
+T = 1;
+tau = 0.4;
+K0 = 1;
+K1 = 3;
 sol = dde23(@(t,y,z) -K0*y-K1*z, [tau],@(t) xh0,[0,T], options);
 
 

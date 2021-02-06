@@ -5,21 +5,28 @@
 %         Feb 2, 2021.
 
 %% parameters
-PLOT = 0;
+PLOT = 1;
 PLOT_NONNEG = 1;
-T = 1.2;      %time horizon
+T = 1;      %time horizon
 xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
 % tau = 0.2;  %delay x(t - tau)
 % K0 = 1;     %gain in dynamics x(t)
 % K1 = 5;     %gain in dynamics x(t-tau)
+% 
+% tau = 0.4;  %delay x(t - tau)
+% K0 = 2;     %gain in dynamics x(t)
+% K1 = 3;     %gain in dynamics x(t-tau)
 
-tau = 0.2;  %delay x(t - tau)
-K0 = 2;     %gain in dynamics x(t)
-K1 = 3;     %gain in dynamics x(t-tau)
-
+T = 1;
+tau = 0.4;
+K0 = 1;
+K1 = 3;
 
 % tau = 0;
-order = 5;      %relaxation order
+order = 4;      %relaxation order
+
+p = @(x) x;
+
 
 %% plot the trajectory
 options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9, 'Jumps', 0);
@@ -27,7 +34,7 @@ options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9, 'Jumps', 0);
 % sol = ddesd(@(t,y,z) -K*z, @(t,y) t-tau,@(t) xh0,[0,T], options);
 % sol = dde23(@(t,y,z) -K*z, [tau],@(t) xh0,[0,T], options);
 if tau == 0
-    sol = ode45(@(t, y) -K0*y, [0, T], xh0, options);
+    sol = ode45(@(t,y) -K0*y, [0, T], xh0, options);
 else
     sol = dde23(@(t,y,z) -K0*y-K1*z, [tau],@(t) xh0,[0,T], options);
 end
@@ -50,26 +57,33 @@ d = 2*order;
 
 mset clear
 mpol('t','x0','x1');mu  = meas(t, x0, x1);  %joint occupation measure
-mpol('tT', 'xT');   muT = meas(tT, xT);     %final measure
+mpol('tp', 'xp');   mup = meas(tp, xp);     %peak measure
 mpol('tnn', 'xnn'); nun = meas(tnn, xnn);   %component -1
 mpol('tnz', 'xnz'); nuz = meas(tnz, xnz);   %component  0
 mpol('tnp', 'xnp'); nup = meas(tnp, xnp);   %component  1
 
+%absolute continuity for peak estimation
+mpol('tnpc', 'xn1c'); nunc = meas(tnpc, xn1c);   %component 1 [0, kappa T] complement
+
 %support constraints
-supp_con = [tT == T; 
+% tp*(T-tp) == T; 
+% tp == T
+supp_con = [tp*(T-tp) == T; 
             tnz*((T - tau) - tnz) >= 0; 
-            (tnp - (T - tau)) * (T - tnp) >= 0;
+            (tnp  - (T - tau)) * (T - tnp)  >= 0;
+            tnpc * (T - tnpc) >= 0;
             t*(T - t) >= 0;            
             x0^2 <= xh0^2;
             x1^2 <= xh0^2;
-            xT^2 <= xh0^2;
+            xp^2 <= xh0^2;
             xnz^2 <= xh0^2;
-            xnp^2 <= xh0^2];
+            xnp^2 <= xh0^2;
+            xn1c^2 <= xh0^2;];
 %                     xnn == xh0; % redundant
 %             (tnn + tau) * tnn >= 0; %redundant
         
 %% monomials
-yT = mmon([tT, xT], d);
+yp = mmon([tp, xp], d);
         
 %% reference variables and measures
 dv = genPowGlopti(2,d);
@@ -82,7 +96,7 @@ yh = history_mom(tau, xh0, dv);
 v0  = mmon([t; x0], d);
 f = -K0*x0 -K1*x1; %dynamics
 Ay = mom(diff(v0, t) + diff(v0, x0)*f); 
-Liou = Ay + y0 - mom(yT);
+Liou = Ay + y0 - mom(yp);
 % Liou = -(Ay + y0) + mom(yT);
 
 %(t, x0) marginal
@@ -102,7 +116,10 @@ mnz_shift = subs(mnz, tnz, tnz + tau);
 mnn = mmon([tnn; xnn], d);
 mnn_shift = subs(mnn, tnn, tnn + tau);
 
-phi1 = mom(v1) - mom(mnz_shift) - mom(mnn_shift);
+%absolute continuity
+yc = mom(mmon([tnpc; xn1c], d));
+
+phi1 = mom(v1) + yc - mom(mnz_shift) - mom(mnn_shift);
 
 
 
@@ -113,7 +130,7 @@ mom_con = [Liou == 0;        %Liouville
            mom(mnn) == yh];  %history given
 
 %% Solve problem
-objective = max(mass(mnn)); 
+objective = max(mom(p(xp))); 
 % objective = max(mass(nuz)); 
 mset('yalmip',true);
 mset(sdpsettings('solver', 'mosek'));
@@ -122,16 +139,37 @@ P = msdp(objective, ...
 
 % solve LMIP moment problem
 [status,obj_rec, m,dual_rec]= msol(P);
+obj_rec
+
+%trajectory interpolator
+ci = spline(sol.x, sol.y);
+ci.pieces = ci.pieces + 1;
+ci.breaks = [-1 ci.breaks];
+ci.coefs = [zeros(1, size(ci.coefs, 2)-1) xh0; ci.coefs];
 
 
-%% Analyze moments
+Nt = 400;
+t_traj = linspace(0, T, Nt);
+x0_traj = ppval(ci, t_traj);
+x1_traj = ppval(ci, t_traj-tau);
 
-%estimation from trajectory
-m_traj = monom_int(sol.x, sol.y, dv);
-%(t, x0) marginal of joint occupation measure mu
-m_mom  = double(mom(v0));
-m_comp = [m_traj m_mom];
-norm_diff = norm(m_traj-m_mom)
+%peak extraction/estimation
+[peak_traj,  i_traj] = max(p(x0_traj));
+Mp = double(mmat(mup));
+Mp_1 = Mp(1:3, 1:3);
+rp = rank(Mp_1);
+
+%% Dual Variables
+
+dual_rec_1 = dual_rec{1};
+n_monom = length(Ay);
+coeff_v    = dual_rec_1(1:n_monom);
+coeff_phi0 = dual_rec_1(n_monom + (1:n_monom));
+coeff_phi1 = dual_rec_1(2*n_monom + (1:n_monom));
+
+v_f    = @(te, xe) eval(coeff_v'*v0, [t; x0], [te; xe]);
+phi0_f = @(te, xe) eval(coeff_phi0'*v0, [t; x0], [te; xe]);
+phi1_f = @(te, xe) eval(coeff_phi1'*v0, [t; x0], [te; xe]);
 
 % disp(['Norm Gap between empirical and LMI moments = ', num2str(norm_diff)])
 
@@ -161,7 +199,9 @@ t_traj = linspace(0, T, Nt);
 x0_traj = ppval(ci, t_traj);
 x1_traj = ppval(ci, t_traj - tau);
 
-nonneg_T = v_f(T, x0_traj(end));
+% nonneg_T = v_f(T, x0_traj(end));
+
+nonneg_cost = v_f(t_traj, x0_traj) - p(x0_traj);
 
 nonneg_flow = -(v_f(t_traj, x0_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
 
@@ -173,37 +213,58 @@ tnu1_traj = linspace(T-tau, T, floor(Nt/4));
 xnu1_traj = ppval(ci, tnu1_traj);
 nonneg_1    = phi0_f(tnu1_traj, xnu1_traj);
 
+nonneg_1c = phi1_f(tnu1_traj, xnu1_traj);
 
 if PLOT
-    
-    figure(3)
-    semilogy((abs(m_traj - m_mom)), 'o')
-    title('Error in moment estimation')
-    xlabel('moment index')
-    ylabel('$\mid m_{\alpha \beta} - \hat{m}_{\alpha \beta} \mid$', 'interpreter', 'latex', 'fontsize', 14) 
-    grid on
+    hold on
+    scatter(t_traj(i_traj), x0_traj(i_traj), 120, '*r')
+    plot(xlim, obj_rec*[1, 1], '-.r', 'LineWidth', 3)
+    hold off
 end
     
  if PLOT || PLOT_NONNEG    
     figure(2)
     clf
 %     tiledlayout(3, 1)
-    subplot(3,1,1)
-%     nexttile
+    subplot(5,1,1)
     plot(t_traj, nonneg_flow)
-    title('$-(L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\mu: \quad -(L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
     
 %     nexttile
-    subplot(3,1,2)
-    plot(tnu0_traj, nonneg_0)
-    title('$\phi_0(t, x) + \phi_1(t+\tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
-    
-%     nexttile
-    subplot(3,1,3)
+    subplot(5,1,2)
     plot(tnu1_traj, nonneg_1)
-    title('$\phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\nu_1: \quad \phi_0(t, x) + \kappa^{-1} \phi_1(\kappa^{-1} t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     xlabel('time')
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
     
+        
+    subplot(5,1,3)
+    plot(tnu1_traj, nonneg_1c)
+    title('$\hat{\nu}_1: \quad\phi_1(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
+    
+    
+    subplot(5,1,4)
+    plot(tnu0_traj, nonneg_0)
+    title('$\nu_0: \quad \phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
+    
+    subplot(5, 1, 5 )
+    plot(t_traj, nonneg_cost)
+    title('$\mu_p: \quad v(t, x) - p(x)$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
+ 
 
 end
 

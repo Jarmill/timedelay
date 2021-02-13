@@ -162,7 +162,7 @@ ci.breaks = [-taus ci.breaks];
 ci.coefs = [zeros(2, size(ci.coefs, 2)-1) xh0; ci.coefs];
 
 %interpolated trajectories
-Nt = 500;
+Nt = 1000;
 t_traj = linspace(0, 1, Nt);
 x0_traj = ppval(ci, t_traj);
 x1_traj = ppval(ci, t_traj - taus);

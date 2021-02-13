@@ -11,7 +11,7 @@ gamma = 0.1;
 Tmax = 30;  %max time of simulation (days)
 tau = 9;    %incubation period (days)
 
-Trange = linspace(0, Tmax, 200);
+Trange = linspace(0, Tmax, 1000);
 
 
 I0 = 0.2;   %initial infection rate, constant history
@@ -176,7 +176,7 @@ nonneg_1    = phi0_f(tnu1_traj, xnu1_traj);
 if PLOT_MOM
     figure(3)
     semilogy((abs(m_traj - m_mom)), 'o')
-    title('Error in moment estimation')
+    title('Error in moment estimation', 'FontSize', 16)
     xlabel('moment index')
     ylabel('$\mid m_{\alpha \beta} - \hat{m}_{\alpha \beta} \mid$', 'interpreter', 'latex', 'fontsize', 14) 
     grid on

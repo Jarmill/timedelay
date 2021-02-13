@@ -19,7 +19,7 @@ Tmax = 30; %max time of simulation
 %initial infection rate
 I0= 0.2;
 x0 = [1-I0; I0];    %initial condition at t=0
-% xh0 = [0; 0];       %constant history
+% xh0 = [1; 0];       %constant history
 xh0 = x0;
 
 %% Solve Differential Equations

@@ -41,7 +41,7 @@ sol = dde23(sir_delay, tau/Tmax, sir_history, Trange/Tmax, options);
 if PLOT_TRAJ
     figure(1)
     clf
-    plot([-tau, Tmax * sol.x], [xh0(2), sol.y(2, :)], 'DisplayName', ['Delay=', num2str(tau)])
+    plot([-tau, Tmax * sol.x], [xh0(2), sol.y(2, :)], 'DisplayName', 'Infection Rate')
     
     title('Infection Rate of Epidemic', 'FontSize', 16)
     xlabel('time (days)')
@@ -191,7 +191,7 @@ if PLOT_TRAJ
         scatter(Mp_1(1, 2)*Tmax, Mp_1(1, 4), 300, 'or', 'DisplayName', 'recovered peak')
     end
     hold off
-    legend('location', 'northwest')
+    legend('location', 'west')
 end
 
 if PLOT_NONNEG

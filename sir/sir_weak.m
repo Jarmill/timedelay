@@ -15,8 +15,11 @@ Trange = linspace(0, Tmax, 1000);
 
 
 I0 = 0.2;   %initial infection rate, constant history
-xh0 = [1-I0; I0];
-x00 = xh0;
+
+x00 = [1-I0; I0];
+xh0 = x00;
+% xh0 = [1; 0];
+
 
 SOLVE       = 1;
 PLOT_TRAJ   = 1;
@@ -31,7 +34,7 @@ options = ddeset('AbsTol', 1e-9, 'RelTol', 1e-7, 'Jumps', [0], 'MaxStep', 0.1);
 sir_delay = @(t,y,Z) Tmax * [-beta*y(1)*y(2);
             beta*Z(1)*Z(2) - gamma*(y(2))];
 
-sir_history = @(t) xh0;
+sir_history = @(t) xh0 * (t ~= 0) + x00 * (t == 0);
 
 sol = dde23(sir_delay, tau/Tmax, sir_history, Trange/Tmax, options);
 
@@ -43,7 +46,7 @@ m_traj = monom_int(sol.x, sol.y, dv);
 if PLOT_TRAJ
     figure(1)
     clf
-    plot([-tau, Tmax * sol.x], [xh0(2), sol.y(2, :)], 'DisplayName', ['Delay=', num2str(tau)])
+    plot([-tau, -1e-8, Tmax * sol.x], [xh0(2), xh0(2), sol.y(2, :)], 'DisplayName', ['Delay=', num2str(tau)])
     
     title('Infection Rate of Epidemic', 'FontSize', 16)
     xlabel('time (days)')

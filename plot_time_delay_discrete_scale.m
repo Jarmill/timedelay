@@ -1,7 +1,8 @@
-options = ddeset('AbsTol', 1e-9, 'RelTol', 1e-7, 'Jumps', [0]);
+options = ddeset('AbsTol', 1e-9, 'RelTol', 1e-7, 'Jumps', [0], 'MaxStep', 0.1);
 
 xh0 = -1;
-T = 2;
+x00 = 0;
+T = 1;
 % tau = 0.1;
 % K0 = 1;
 % K1 = 14;
@@ -20,13 +21,13 @@ K1 = 5;
 % tau = 0.4;
 % K0 = 1;
 % K1 = 3;
-sol = dde23(@(t,y,z) -K0*y-K1*z, [tau],@(t) xh0,[0,T], options);
+sol = dde23(@(t,y,z) -K0*y-K1*z, [tau],@(t) xh0*(t~=0) + x00*(t==0),[0,T], options);
 
 
 figure(5)
 clf
 hold on
-plot([-tau sol.x], [-1 sol.y])
+plot([-tau -1e-8 sol.x], [xh0 xh0 sol.y])
 plot([-tau, T], [0, 0], ':k')
 xlim([-tau, T])
 ylim(abs(xh0)*1.1*[-1, 1])

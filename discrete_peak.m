@@ -25,10 +25,10 @@ order = 4;
 % order = 8;      %relaxation order
 
 
-% tau = 0.1;
-% K0 = 1;
-% K1 = 10;
-% order = 8;      %relaxation order
+tau = 0.1;
+K0 = 1;
+K1 = 10;
+order = 8;      %relaxation order
 
 
 % tau = 0;
@@ -37,7 +37,7 @@ p = @(x) x;     %objective in peak estimation
 
 
 %% plot the trajectory
-options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9, 'Jumps', 0);
+options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9, 'Jumps', 0, 'MaxStep', 1/Tmax);
 %ddesd(dynamics, delay, history, time range, options)
 % sol = ddesd(@(t,y,z) -K*z, @(t,y) t-tau,@(t) xh0,[0,T], options);
 % sol = dde23(@(t,y,z) -K*z, [tau],@(t) xh0,[0,T], options);

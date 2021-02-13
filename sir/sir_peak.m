@@ -1,5 +1,5 @@
 %An SIR model of an epidemic for varying time delay
-%estimate moments of a single trajectory (weak solution)
+%peak espimation: bound maximum infection rate
 %
 %Only SI, R can be recovered later by integrating I
 %Jared Miller, 2/12/2021
@@ -13,20 +13,20 @@ tau = 9;    %incubation period (days)
 
 Trange = linspace(0, Tmax, 200);
 
-
-I0 = 0.2;   %initial infection rate, constant history
+I0 = 0.2;   %initial infection rate, conspant history
 xh0 = [1-I0; I0];
 x00 = xh0;
 
+p = @(s, i) i; %objective to maximize
+
 SOLVE       = 1;
 PLOT_TRAJ   = 1;
-PLOT_MOM    = 1;
 PLOT_NONNEG = 1;
 
 order = 3;
 
 %% sample trajectory
-options = ddeset('AbsTol', 1e-9, 'RelTol', 1e-7, 'Jumps', [0], 'MaxStep', 0.1);
+options = ddeset('AbsTol', 1e-9, 'RelTol', 1e-7, 'Jumps', [0], 'Maxstep', 0.1);
 
 sir_delay = @(t,y,Z) Tmax * [-beta*y(1)*y(2);
             beta*Z(1)*Z(2) - gamma*(y(2))];
@@ -36,9 +36,7 @@ sir_history = @(t) xh0;
 sol = dde23(sir_delay, tau/Tmax, sir_history, Trange/Tmax, options);
 
 %empirical moments
-d = 2*order;
-dv = genPowGlopti(3,d);
-m_traj = monom_int(sol.x, sol.y, dv);
+
 
 if PLOT_TRAJ
     figure(1)
@@ -54,26 +52,32 @@ end
 if SOLVE
     mset clear
     mpol('t','s0','s1', 'i0', 'i1');mu  = meas(t, s0, s1, i0, i1);  %joint occupation measure
-    mpol('tT', 'sT', 'iT');   muT = meas(tT, sT, iT);     %final measure
+    mpol('tp', 'sp', 'ip');   mup = meas(tp, sp, ip);     %final measure
     mpol('tnn', 'snn', 'inn'); nun = meas(tnn, snn, inn);   %component -1 [-tau, 0]
     mpol('tnz', 'snz', 'inz'); nuz = meas(tnz, snz, inz);   %component  0 [0, T-tau]
     mpol('tnp', 'snp', 'inp'); nup = meas(tnp, snp, inp);   %component  1 [T-tau, T]
+    %absolute continuity for peak espimation
+    mpol('tnpc', 'sn1c', 'in1c'); nunc = meas(tnpc, sn1c, in1c);   %component 1 complement [0, T]
 
     %support constraints
     taus = tau/Tmax;
     %dynamics scaled to t in [0, 1].
     supp_con = [t * (1-t) >= 0;
-                tT == 1;
+                tp * (1 - tp) >= 0;
                 tnz * ( 1 - taus - tnz) >= 0;
                 (tnp - (1-taus)) * (1 - tnp) >= 0;
+                tnpc * (1-tnpc) >= 0;
                 tri_con(s0, i0);
                 tri_con(s1, i1);
                 tri_con(snz, inz);
                 tri_con(snp, inp);
+                tri_con(sn1c, in1c);
     ];
 
 
     %% reference variables and measures
+    d = 2*order;
+    dv = genPowGlopti(3,d);
 
 
     y0 = prod([0; x00]'.^dv, 2); %initial measure
@@ -81,12 +85,12 @@ if SOLVE
 
     %% Affine relations
     %Liouville Equation
-    yT = mmon([tT, sT, iT], d);
+    yp = mmon([tp, sp, ip], d);
     v0  = mmon([t; s0; i0], d);
 
     f = Tmax * [-beta*s0*i0; beta*s1*i1 - gamma*i0]; %dynamics
     Ay = mom(diff(v0, t) + diff(v0, [s0; i0])*f); 
-    Liou = Ay + y0 - mom(yT);
+    Liou = Ay + y0 - mom(yp);
 
     %(t, x0) marginal
     %test functions on components (t)^alpha x^beta
@@ -101,11 +105,14 @@ if SOLVE
     mnz = mmon([tnz; snz; inz], d);
     mnz_shift = subs(mnz, tnz, tnz + taus);  
 
-    %[-tau, 0] component]
+    %[-tau, 0] component
     mnn = mmon([tnn; snn; inn], d);
     mnn_shift = subs(mnn, tnn, tnn + taus);
 
-    phi1 = mom(v1) - mom(mnz_shift) - mom(mnn_shift);
+    %absolute continuity
+    yc = mom(mmon([tnpc; sn1c; in1c], d));
+    
+    phi1 = mom(v1) + yc - mom(mnz_shift) - mom(mnn_shift);
 
     %% moment constraints
     mom_con = [-Liou == 0;        %Liouville
@@ -114,7 +121,7 @@ if SOLVE
                mom(mnn) == yh];   %history given
 
     %% Solve problem
-    objective = max(mass(mnn)); 
+    objective = max(mom(p(sp, ip)));
     % objective = max(mass(nuz)); 
     mset('yalmip',true);
     mset(sdpsettings('solver', 'mosek'));
@@ -123,13 +130,13 @@ if SOLVE
 
     % solve LMIP moment problem
     [status,obj_rec, m,dual_rec]= msol(P);
+    obj_rec
+    
+    %peak extraction/estimation
+    Mp = double(mmat(mup));
+    Mp_1 = Mp(1:4, 1:4);
+    rp = rank(Mp_1, 1e-3);
 end
-
-%% Analyze moments
-
-m_mom  = double(mom(v0));
-m_comp = [m_traj m_mom];
-norm_diff = norm(m_traj-m_mom)
 
 %% Recover dual functions
 
@@ -155,13 +162,15 @@ ci.breaks = [-taus ci.breaks];
 ci.coefs = [zeros(2, size(ci.coefs, 2)-1) xh0; ci.coefs];
 
 %interpolated trajectories
-Nt = 400;
+Nt = 500;
 t_traj = linspace(0, 1, Nt);
 x0_traj = ppval(ci, t_traj);
 x1_traj = ppval(ci, t_traj - taus);
+[peak_traj,  i_traj] = max(p(x0_traj(1, :), x0_traj(2, :)));
 
 %nonnegative functions
-nonneg_T = v_f(1, x0_traj(:, end));
+nonneg_cost = v_f(t_traj, x0_traj) - p(x0_traj(1, :), x0_traj(2, :));
+
 nonneg_flow = -(Lv_f(t_traj, x0_traj, x1_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
 
 tnu0_traj = linspace(0, 1-taus, Nt);
@@ -172,36 +181,64 @@ tnu1_traj = linspace(1-taus, 1, floor(Nt/4));
 xnu1_traj = ppval(ci, tnu1_traj);
 nonneg_1    = phi0_f(tnu1_traj, xnu1_traj);
 
+nonneg_1c = -phi1_f(t_traj, x0_traj);
 
-if PLOT_MOM
-    figure(3)
-    semilogy((abs(m_traj - m_mom)), 'o')
-    title('Error in moment estimation')
-    xlabel('moment index')
-    ylabel('$\mid m_{\alpha \beta} - \hat{m}_{\alpha \beta} \mid$', 'interpreter', 'latex', 'fontsize', 14) 
-    grid on
+if PLOT_TRAJ
+    hold on
+    scatter(t_traj(i_traj)*Tmax, x0_traj(2, i_traj), 300, '*r', 'DisplayName', 'true peak')
+    plot(xlim, obj_rec*[1, 1], '-.r', 'LineWidth', 3, 'DisplayName', 'bound peak')
+    if rp == 1
+        scatter(Mp_1(1, 2)*Tmax, Mp_1(1, 4), 300, 'or', 'DisplayName', 'recovered peak')
+    end
+    hold off
+    legend('location', 'northwest')
 end
 
 if PLOT_NONNEG
        figure(2)
-    clf
-%     tiledlayout(3, 1)
-    subplot(3,1,1)
-%     nexttile
-    plot(Tmax * t_traj, nonneg_flow)
-    title('$-(L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
+ subplot(5,1,1)
+    plot(Tmax*t_traj, nonneg_flow)
     xlim([0, Tmax])
+    title('$\mu: \quad -(L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
+    
 %     nexttile
-    subplot(3,1,2)
-    plot(Tmax * tnu0_traj, nonneg_0)
-    title('$\phi_0(t, x) + \phi_1(t+\tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
-    xlim([0, Tmax-tau])
-%     nexttile
-    subplot(3,1,3)
-    plot(Tmax * tnu1_traj, nonneg_1)
-    title('$\phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    subplot(5,1,2)
+    plot(Tmax*tnu0_traj, nonneg_0)
+    xlim([0, Tmax - tau])
+    title('$\nu_0: \quad \phi_0(t, x) + \phi_1(t + \tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
     xlabel('time')
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
+    
+        
+    subplot(5,1,3)
+    plot(Tmax*t_traj, nonneg_1c)
+    xlim([0, Tmax])
+    title('$\hat{\nu}_1: \quad -\phi_1(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
+    
+    
+    subplot(5,1,4)
+    plot(Tmax*tnu1_traj, nonneg_1)
     xlim([Tmax-tau, Tmax])
+    title('$\nu_1: \quad \phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
+    
+    subplot(5, 1, 5 )
+    plot(Tmax*t_traj, nonneg_cost)
+    xlim([0, Tmax])
+    title('$\mu_p: \quad v(t, x) - p(x)$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
     
     figure(4)
     plot(Tmax * t_traj, v_f(t_traj, x0_traj))
@@ -235,6 +272,6 @@ function em = monom_int(t, x, dv)
 end
 
 function c = tri_con(s, i)  
-    %support constraint contained in a unit simplex
+    %support conspraint contained in a unip simplex
     c = [s >= 0; i>= 0; s+i <= 1];
 end

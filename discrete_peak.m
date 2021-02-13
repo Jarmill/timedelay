@@ -71,7 +71,7 @@ mpol('tnz', 'xnz'); nuz = meas(tnz, xnz);   %component  0
 mpol('tnp', 'xnp'); nup = meas(tnp, xnp);   %component  1
 
 %absolute continuity for peak estimation
-mpol('tnpc', 'xn1c'); nunc = meas(tnpc, xn1c);   %component 1 [0, kappa T] complement
+mpol('tnpc', 'xn1c'); nunc = meas(tnpc, xn1c);   %component 1 complement [0, T]
 
 %support constraints
 % tp == T
@@ -119,7 +119,7 @@ v1  = mmon([t; x1], d);
 mnz = mmon([tnz; xnz], d);
 mnz_shift = subs(mnz, tnz, tnz + tau);  
 
-%[-tau, 0] component]
+%[-tau, 0] component
 mnn = mmon([tnn; xnn], d);
 mnn_shift = subs(mnn, tnn, tnn + tau);
 

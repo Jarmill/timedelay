@@ -34,7 +34,7 @@ xh = ones(1, tau);
 eA = abs(eig(A));
 
 %moment analysis
-order = 5;
+order = 9;
 d = 2*order;
 m_traj = sum(y.^[0:d], 1)'; %moments
 M_traj = hankel(m_traj(1:(order+1)), m_traj((order+1):end)); %moment matrix
@@ -64,7 +64,7 @@ yh = sum(xh(2:end)'.^[0:d], 1)';
 yT = mmon(xT, d);
 v0 = mmon(x0, d);
 f  = -k0*x0 -ktau*x1;
-push = subs(v0, x0, f);
+push = subs(v0, x0, -f);
 Ay = mom(push - v0);
 Liou = Ay + y0 - mom(yT);
 
@@ -77,7 +77,7 @@ v1 = mmon(x1, d);
 phi1 = mom(v1) - mom(mmon(xnz, d)) - mom(mmon(xnn, d));
 mnn = mmon(xnn, d);
 
-mom_con = [mass(mu) <= Tf+1;  %mass of joint occupation is total time
+mom_con = [mass(mu) <= Tf;  %mass of joint occupation is total time
            -Liou == 0;        %Liouville
            -phi0 == 0;        %x(t)
            -phi1 == 0;        %x(t - tau)

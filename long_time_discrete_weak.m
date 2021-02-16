@@ -29,7 +29,7 @@ xh = ones(1, tau);
 eA = abs(eig(A));
 
 %moment analysis
-order = 8;
+order = 6;
 d = 2*order;
 dv = genPowGlopti(2,d);
 % m_traj = sum(y.^[0:d], 1)'; %moments

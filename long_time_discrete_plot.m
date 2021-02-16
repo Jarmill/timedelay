@@ -2,8 +2,11 @@
 %plotting and testing
 
 
-Tf = 30;
-h = 6;
+% Tf = 30;
+% h = 6;
+
+Tf = 240;
+h = 30;
 k0 = 0.25;
 kh = 0.75;
 

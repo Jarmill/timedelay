@@ -17,6 +17,11 @@ t = linspace(0, T, N);
 x0 = f(t);
 x1 = f(t - tau);
 
+h = linspace(-tau, 0, N*T/tau);
+
+[tt, hh] = meshgrid(t, h);
+ff = f(tt + hh);
+
 %components
 tn = linspace(-tau, 0, N/4);
 tz = linspace(0, T - tau, N);
@@ -73,3 +78,20 @@ plot(tz + tau, xz, 'Color', cz, 'LineWidth', 3)
 title('Delayed Trajectory', 'FontSize', FS)
 ylabel('x(t-\tau)')
 xlabel('t')
+
+figure(5)
+clf
+hold on
+surf(tt, hh, ff, 'edgecolor', 'none', 'facealpha', 0.3, 'facecolor', 'k')
+plot3(tz, zeros(size(tz)), xz, 'color', cz, 'LineWidth', 3)
+plot3(tp, zeros(size(tp)), xp, '-.','color', cp, 'LineWidth', 3)
+plot3(tz+tau, -tau + zeros(size(tz)), xz, 'color', cz, 'LineWidth', 3)
+plot3(tn+tau, -tau + zeros(size(tn)), xn, ':', 'color', cn, 'LineWidth', 3)
+plot3(zeros(size(tn)), tn, xn, ':', 'color', cn, 'LineWidth', 3)
+plot3(T + zeros(size(tn)), tp - T, xp, '-.','color', cp, 'LineWidth', 3)
+pbaspect([6 1 3])
+xlabel('t')
+ylabel('h')
+zlabel('x(t + h)')
+title('Time Delay Transport Equation', 'FontSize', FS)
+view(3)

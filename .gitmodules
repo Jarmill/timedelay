@@ -1,0 +1,6 @@
+[submodule "meas_class"]
+	path = meas_class
+	url = https://github.com/Jarmill/meas_class.git
+[submodule "gloptipoly3_mod"]
+	path = gloptipoly3_mod
+	url = https://github.com/Jarmill/gloptipoly3_mod.git

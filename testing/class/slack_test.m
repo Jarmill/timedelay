@@ -37,14 +37,12 @@ lsupp.X_init = X_init;
 lsupp.X_history = X_history;
 
 %% relaxation information
-order = 2;
+order = 1;
 d = 2*order;
 
-%% define component measures
-cm = meas_component(lsupp);
-s0 = cm.mom_shift(0, d)
-s1 = cm.mom_shift(1, d)
-s2 = cm.mom_shift(2, d)
-
+%% define slack measures
+sm = meas_time_slack(lsupp);
+s1 = sm.mom_index(1, d)
+s2 = sm.mom_index(2, d)
 
 % lag_span = cm.lag_intervals()

@@ -1,5 +1,5 @@
-classdef component_meas
-    %COMPONENT_MEAS Collection of component measures for time delay
+classdef meas_component
+    %MEAS_COMPONENT Collection of component measures for time delay
     %systems. Enforces data consistency by shifting component measures
     %   Detailed explanation goes here
     
@@ -13,12 +13,12 @@ classdef component_meas
         %TODO: hybrid systems with time delays? Does it make sense to have
         %more than one location?
         
-        %TODO: Treat the shaping constraints
+        %TODO: Treat the history shaping constraints
     end
     
     methods
-        function obj = component_meas(delay_supp)
-            %COMPONENT_MEAS Construct an instance of this class
+        function obj = meas_component(delay_supp)
+            %MEAS_COMPONENT Construct an instance of this class
             
             %fill in attributes
             obj.Tmax = delay_supp.Tmax;
@@ -113,17 +113,19 @@ classdef component_meas
         end
         
         function cons = shaping_cons(obj, d)
-            %TODO: Treat the shaping constraints
+            %TODO: Treat the history shaping constraints
             cons = [];
         end
         
-        function shift_out = mom_shift(obj, d, ind_lag)
+        function shift_out = mom_shift(obj, ind_lag, dmin, dmax)
             %MOM_SHIFT moments of shifted copies of component measures for
-            %the data at time lag 'ind_lag'
-            if nargin < 3
-                ind_lag = 0;
+            %the data at time lag 'ind_lag'. This is used to constrain the
+            %marginals of the joint occupation measure
+
+            if nargin < 4
+                dmax = dmin;
+                dmin = 0;
             end
-            
             
             
             
@@ -132,17 +134,19 @@ classdef component_meas
             if ind_lag == 0 
                 lag_curr = 0;
             else
-                lag_curr = obj.lags(i);
+                lag_curr = obj.lags(ind_lag);
             end
             
             %iterate through component measures     
             shift_out = 0;
             for i = 0:Nlag
-                ind_curr = Nlag + i - ind_lag;
+                ind_curr = Nlag + i - ind_lag + 1;
                 
-                mom_shift_curr = obj.meas
-            end
-            
+                mom_shift_curr = obj.meas{ind_curr}.mom_monom_shift(...
+                        -lag_curr, dmin, dmax);
+                    
+                shift_out = shift_out + mom_shift_curr;
+            end            
         end
     end
 end

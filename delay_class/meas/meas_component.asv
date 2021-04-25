@@ -86,36 +86,27 @@ classdef meas_component < meas_collection
             end                                    
         end
         
-        function mmmon_out = mom_monom_shift(obj, meas_in, time_shift, dmin, dmax)
+        function mmmon_out = mom_monom_shift(obj, time_shift, dmin, dmax)
             %MOM_MONOM_SHIFT moments of monomials where the time is shifted
             %from 't' to 't-time_shift'
-            if nargin < 5
+            if nargin < 4
                 dmax = dmin;
                 dmin = 0;
             end
             
 %             monom = obj.monom(dmin, dmax);
 %             monom_shift = subs(monom, obj.vars.t, obj.vars.t - time_shift);
-%           @mpol/subs takes a long time, mostly due to the 'locate' call
-            
-            if time_shift == 0
-                mmmon_out = meas_in.mom_monom(dmin,dmax);
-            else
-                var_shift = [meas_in.vars.t-time_shift; meas_in.vars.x];
-                nvar = length(var_shift);
-                
-                %monomial generation copied over from @mpol/mmon
-                vpow = [];
-                for k = dmin:dmax
-                    vpow = [vpow;genpow(nvar,k)];
-                end
-
-                monom_shift = prod(var_shift'.^vpow, 2);              
-
-                mmmon_out = mom(monom_shift);
+%           subs takes a long time, mostly 
+            %copy over from @mpol/mmon
+            vpow = [];
+            for k = degmin:degmax
+                vpow = [vpow;genpow(nvar,k)];
             end
+            var_shift = [obj.vars.t-time_shift; obj.vars.x];
+            monom_shift = prod(var_shift'.^vpow, 2);              
+
+            mmmon_out = mom(monom_shift);
         end
-        
         function cons = shaping_cons(obj, d)
             %TODO: Treat the history shaping constraints
             cons = [];
@@ -146,7 +137,7 @@ classdef meas_component < meas_collection
             for i = 0:Nlag
                 ind_curr = Nlag + i - ind_lag + 1;
                 
-                mom_shift_curr = obj.mom_monom_shift(obj.meas{ind_curr},...
+                mom_shift_curr = obj.meas{ind_curr}.mom_monom_shift(...
                         -lag_curr, dmin, dmax);
                     
                 shift_out = shift_out + mom_shift_curr;

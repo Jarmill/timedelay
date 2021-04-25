@@ -37,7 +37,7 @@ lsupp.X_init = X_init;
 lsupp.X_history = X_history;
 
 %% relaxation information
-order = 2;
+order = 3;
 d = 2*order;
 
 %% define component measures

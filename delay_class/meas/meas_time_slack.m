@@ -1,4 +1,4 @@
-classdef meas_time_slack
+classdef meas_time_slack < meas_collection
     %MEAS_TIME_SLACK Collection of slack measures in case the time-delay
     %system has a free terminal time. The marginals of the joint occupation 
     %measure are absolutely continuous with respect to shifted copies of
@@ -8,10 +8,10 @@ classdef meas_time_slack
     
     properties
         Tmax;
-        vars;
+%         vars;
         lags;
-        lag_span;
-        meas;
+%         lag_span;
+%         meas;
     end
     
     methods
@@ -19,35 +19,18 @@ classdef meas_time_slack
             %MEAS_TIME_SLACK Construct an instance of this class
             %   Detailed explanation goes here
             %fill in attributes
+            obj@meas_collection(delay_supp, {'t', 'x'}); 
+            
             obj.Tmax = delay_supp.Tmax;
             obj.lags = delay_supp.lags;
-            obj.vars = struct('t', delay_supp.vars.t, 'x', delay_supp.vars.x);                                    
+%             obj.vars = struct('t', delay_supp.vars.t, 'x', delay_supp.vars.x);                                    
             
             %create measures
 %             obj.lag_span = obj.lag_intervals();
 
             obj = obj.generate_measures(delay_supp);
         end
-        
-%         function lag_span = lag_intervals(obj, lags, Tmax)
-%             %find the time support of each slack measure
-%             %assume the lags are in increasing order tau1 < tau2 < tau3...
-%             
-%             if nargin < 2
-%                 lags = obj.lags;
-%             end
-%             
-%             if nargin < 3
-%                 Tmax = obj.Tmax;
-%             end
-%             
-% %             lag_all = [0, lags];
-%             
-%             %stack up the spans together
-% %             lag_span = [-lag_all; Tmax - lag_all];
-%             lag_span = [-lags; Tmax - lags];
-%         end
-        
+                
         function obj = generate_measures(obj,delay_supp)
             %GENERATE_MEASURES Define and fill in component measures based
             %on support information
@@ -70,37 +53,37 @@ classdef meas_time_slack
                 
                 t_supp_curr = obj.vars.t*(obj.Tmax-obj.vars.t) >= 0;
                 
-                obj.meas{i} = obj.meas_def(suffix, [t_supp_curr; X]);                                                                     
+                obj.meas{i} = obj.meas_def({'t', 'x'}, suffix, [t_supp_curr; X]);                                                                     
             end                                    
         end
         
-        function meas_new = meas_def(obj, suffix, supp_ref)           
-            %declare a variable for each measure (index ind in the union)
-            vars_new = struct('t', [], 'x', []);           
-            varnames = fields(vars_new);
-            for i = 1:length(varnames)
-                curr_name = varnames{i};
-                curr_var = obj.vars.(curr_name);
-                
-                if ~isempty(curr_var)
-                    %declare a new variable
-                    new_name = [curr_name, suffix];
-                    mpol(new_name, length(curr_var), 1);
-                    %load the new variable into vars_new
-                    vars_new.(curr_name) = eval(new_name);
-                end
-            end
-            
-           supp_new = subs_vars(supp_ref, [obj.vars.t; obj.vars.x], ...
-                                [vars_new.t; vars_new.x]);
-           
-            
-            %define the measure
-            %TODO: extend to uncertain systems
-            %or rather, decide if there is dead time and the control/input
-            %w should be stored in the component measures
-            meas_new = meas_base(vars_new, supp_new);
-        end
+%         function meas_new = meas_def(obj, suffix, supp_ref)           
+%             %declare a variable for each measure (index ind in the union)
+%             vars_new = struct('t', [], 'x', []);           
+%             varnames = fields(vars_new);
+%             for i = 1:length(varnames)
+%                 curr_name = varnames{i};
+%                 curr_var = obj.vars.(curr_name);
+%                 
+%                 if ~isempty(curr_var)
+%                     %declare a new variable
+%                     new_name = [curr_name, suffix];
+%                     mpol(new_name, length(curr_var), 1);
+%                     %load the new variable into vars_new
+%                     vars_new.(curr_name) = eval(new_name);
+%                 end
+%             end
+%             
+%            supp_new = subs_vars(supp_ref, [obj.vars.t; obj.vars.x], ...
+%                                 [vars_new.t; vars_new.x]);
+%            
+%             
+%             %define the measure
+%             %TODO: extend to uncertain systems
+%             %or rather, decide if there is dead time and the control/input
+%             %w should be stored in the component measures
+%             meas_new = meas_base(vars_new, supp_new);
+%         end
         
         function mom_out = mom_index(obj, ind_lag, d)
             %get the monomial sequence of this constraint

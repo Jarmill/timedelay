@@ -65,6 +65,20 @@ classdef delay_support < loc_support
                 end
             end
         end
+
+        function X_sys = get_X_history(obj)
+            %constraint on support of history
+            if isempty(obj.X_history)
+                %by default use the support of the initial measure 
+                %at time t=0
+                X_sys = obj.get_X_init();
+            else
+                X_sys = obj.X_history;
+            end
+        end
+
+        %TODO: shaping constraints on histories
+        %such as weak derivative constraints
         
         function W_joint = get_W_joint(obj)
             %Get input support of joint occupation measure

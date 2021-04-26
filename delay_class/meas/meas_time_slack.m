@@ -55,35 +55,7 @@ classdef meas_time_slack < meas_collection
                 
                 obj.meas{i} = obj.meas_def({'t', 'x'}, suffix, [t_supp_curr; X]);                                                                     
             end                                    
-        end
-        
-%         function meas_new = meas_def(obj, suffix, supp_ref)           
-%             %declare a variable for each measure (index ind in the union)
-%             vars_new = struct('t', [], 'x', []);           
-%             varnames = fields(vars_new);
-%             for i = 1:length(varnames)
-%                 curr_name = varnames{i};
-%                 curr_var = obj.vars.(curr_name);
-%                 
-%                 if ~isempty(curr_var)
-%                     %declare a new variable
-%                     new_name = [curr_name, suffix];
-%                     mpol(new_name, length(curr_var), 1);
-%                     %load the new variable into vars_new
-%                     vars_new.(curr_name) = eval(new_name);
-%                 end
-%             end
-%             
-%            supp_new = subs_vars(supp_ref, [obj.vars.t; obj.vars.x], ...
-%                                 [vars_new.t; vars_new.x]);
-%            
-%             
-%             %define the measure
-%             %TODO: extend to uncertain systems
-%             %or rather, decide if there is dead time and the control/input
-%             %w should be stored in the component measures
-%             meas_new = meas_base(vars_new, supp_new);
-%         end
+        end        
         
         function mom_out = mom_index(obj, ind_lag, d)
             %get the monomial sequence of this constraint

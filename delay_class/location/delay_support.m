@@ -55,7 +55,7 @@ classdef delay_support < loc_support
         
         function X_sys = get_X_sys_ind(obj, ind)
             %get support of subsystem's joint occupation measure
-            if isempty(obj.X_sys) || isempty(obj.X_sys{ind})
+            if isempty(ind) || isempty(obj.X_sys) || isempty(obj.X_sys{ind})
                 X_sys = obj.get_X_joint();
             else
                 if iscell(obj.X_sys)

@@ -17,16 +17,19 @@ classdef delay_location_base < location_interface
             %DELAY_LOCATION Construct an instance of this class
             %   Detailed explanation goes here
             
-            lags_scaled = delay_supp.lags/delay_supp.Tmax;
-                if nargin < 3             
-                    %by default, no objective
-                    objective = [];    
-                end
-                obj@location_interface(delay_supp, f, objective, []);
+            Tmax = delay_supp.Tmax;
             
+            if nargin < 3             
+                %by default, no objective
+                objective = [];    
+            end
+            obj@location_interface(delay_supp, f, objective, []);
+
             %scale down the lags
-            obj.supp.lags= lags_scaled;    
-                
+            if obj.supp.SCALE_TIME
+                obj.supp.lags = obj.supp.lags/Tmax;    
+            end
+            
             Nsys = length(obj.f);
             obj.sys = cell(Nsys, 1);
             %subsystems
@@ -47,6 +50,23 @@ classdef delay_location_base < location_interface
 
         
         %% getters 
+        
+        %% support
+        function supp_con_out = supp_con(obj)
+            %SUPP_CON get support constraints of measures
+            
+            %support of initial, terminal, occupation measures
+            supp_con_out = supp_con@location_interface(obj);
+            
+            %consistency measure
+            supp_con_out = [supp_con_out; obj.component.supp()];
+            
+            %time slack
+            if obj.supp.FREE_TERM
+                supp_con_out = [supp_con_out; obj.time_slack.supp()];
+            end
+            
+        end
         
         %% constraints
         

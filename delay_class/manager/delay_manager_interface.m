@@ -7,7 +7,7 @@ classdef delay_manager_interface < manager_interface
     end
     
     methods
-        function obj = delay_manager_interface(loc_supp)
+        function obj = delay_manager_interface(l)
             %DELAY_MANAGER_INTERFACE Construct an instance of this class
             %   Detailed explanation goes here
             obj.Property1 = inputArg1 + inputArg2;

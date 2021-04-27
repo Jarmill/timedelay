@@ -58,6 +58,7 @@ classdef meas_component < meas_collection
             %GENERATE_MEASURES Define and fill in component measures based
             %on support information
             
+            X = delay_supp.get_X();
             X_history = delay_supp.get_X_history();
             
             Nlag = length(obj.lags);
@@ -71,10 +72,13 @@ classdef meas_component < meas_collection
 %                 si = num2str(curr_ind);
                 if curr_ind < 0
                     suffix = ['_n', num2str(-curr_ind)];
+                    curr_supp = X_history;
                 elseif curr_ind == 0 
                     suffix = ['_z'];
+                    curr_supp = X;
                 else
                     suffix = ['_p', num2str(curr_ind)];
+                    curr_supp = X;
                 end
                 
                 %compute the time support and define the component measure
@@ -82,7 +86,7 @@ classdef meas_component < meas_collection
                 
                 t_supp_curr = (obj.vars.t - span(1))*(span(2) - obj.vars.t) >= 0;
                 
-                obj.meas{i} = obj.meas_def({'t', 'x'}, suffix, [t_supp_curr; X_history]);                                                                     
+                obj.meas{i} = obj.meas_def({'t', 'x'}, suffix, [t_supp_curr; curr_supp]);                                                                     
             end                                    
         end
         

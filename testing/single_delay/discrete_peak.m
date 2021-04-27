@@ -6,17 +6,24 @@
 %         Feb 2, 2021.
 
 %% parameters
-PLOT = 1;
-PLOT_NONNEG = 1;
+PLOT = 0;
+PLOT_NONNEG = 0;
 T = 1;      %time horizon
 xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
-tau = 0.4;  %delay x(t - tau)
-K0 = 1;     %gain in dynamics x(t)
-K1 = 4;     %gain in dynamics x(t-tau)
-order = 4;
+
+% tau = 0.4;  %delay x(t - tau)
+% K0 = 1;     %gain in dynamics x(t)
+% K1 = 4;     %gain in dynamics x(t-tau)
+% order = 4;
+
 % tau = 0.3;
 % K0 = 0.5;
 % K1 = 3;
+
+tau = 0.25;
+K0 = 3;
+K1 = 5;
+order = 4;
 
 % T = 1.5;
 % tau = 0.25;
@@ -25,11 +32,11 @@ order = 4;
 % order = 8;      %relaxation order
 
 
-tau = 0.1;
-K0 = 1;
-K1 = 10;
-order = 8;      %relaxation order
-
+% tau = 0.1;
+% K0 = 1;
+% K1 = 10;
+% order = 8;      %relaxation order
+% 
 
 % tau = 0;
 
@@ -37,7 +44,7 @@ p = @(x) x;     %objective in peak estimation
 
 
 %% plot the trajectory
-options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9, 'Jumps', 0, 'MaxStep', 1/Tmax);
+options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9, 'Jumps', 0, 'MaxStep', 1/T);
 %ddesd(dynamics, delay, history, time range, options)
 % sol = ddesd(@(t,y,z) -K*z, @(t,y) t-tau,@(t) xh0,[0,T], options);
 % sol = dde23(@(t,y,z) -K*z, [tau],@(t) xh0,[0,T], options);

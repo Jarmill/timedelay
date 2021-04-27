@@ -1,11 +1,14 @@
-%test the weak solution manager
-%compare againt single_delay/discrete_weak
+%test the peak estimation manager
+%compare againt single_delay/discrete_peak
+
+clear all
+mset clear
 
 %% system properties
 Tmax = 1;      %time horizon
 xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
-% x00 = xh0;  %nodiscontinuity at time 0
-x00 = 0;  %discontinuity at time 0
+x00 = xh0;  %no discontinuity at time 0
+% x00 = 0;  %discontinuity at time 0
 
 tau = 0.25;
 K0 = 3;
@@ -30,10 +33,14 @@ lsupp.vars = vars;
 lsupp.X = (x^2 <= xh0^2);
 lsupp.X_init = (x==x00);
 lsupp.X_history = (x == xh0);
+lsupp.X_history = (x^2 <= 0.25);
+% lsupp.X_history = [x >= xh0; x <= 0];
 
-WM = weak_manager(lsupp, f);
+p = x;
+
+WM = peak_delay_manager_base(lsupp, f, p);
 
 sol = WM.run(order);
 % [objective, mom_con, supp_con, len_dual] = WM.cons(d, Tmax)
-
+sol.obj_rec
 mv_sys = double(WM.loc.sys{1}.meas_occ.mom_monom_marg(0, 2*order));

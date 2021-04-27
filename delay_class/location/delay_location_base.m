@@ -122,6 +122,28 @@ classdef delay_location_base < location_interface
             %data consistency
             [consistency, len_consistency] = obj.consistency_con(d);
             
+            %TODO: form a constraint with the slack measures
+            %pin down the mass of the slack measure?
+            %slack mass can go to infinity, while the mass of history
+            %measures are also unbounded
+            %should the t-marginals of joint + slack equal the lebesgue
+            %distribution over t?
+            
+            %do the direct approach
+            %the mass of the history should be the time spanned by that
+            %history. The history should be lebesgue-distributed in time
+            %(this should already be specified in fixed time)
+            if obj.supp.FREE_TERM
+                cons_history_mass = [];
+                for i = 1:length(obj.supp.lags)
+%                     con_slack_curr = (obj.mass_occ() + obj.time_slack.meas{i}.mass() - obj.supp.Tmax);
+                    con_history_curr = obj.component.meas{i}.mass() - diff(obj.component.lag_span(:, i));
+                    cons_history_mass = [cons_history_mass; con_history_curr];
+                end
+            else
+                cons_history_mass = [];
+            end
+            
             %package up the output
             len_dual = struct;
             len_dual.v = len_liou;
@@ -130,7 +152,8 @@ classdef delay_location_base < location_interface
             len_dual.beta = length(cons_ineq);
             
             %ensure this is the correct sign
-            cons_eq = [-liou; abscont_box; consistency]==0;                        
+%             cons_eq = [-liou; abscont_box; consistency]==0;                        
+            cons_eq = [-liou; abscont_box; -consistency; cons_history_mass]==0;                        
         end     
         
         function [len_out] = len_eq_cons(obj)

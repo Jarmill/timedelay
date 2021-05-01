@@ -27,35 +27,39 @@ xz = f(tz);
 xp = f(tp);
 
 %% Plotting
-FS = 14; %font size of titles
+FS = 16; %font size of titles
 
+%% Delay Embedding
 figure(1)
 clf
 hold on
-plot3(tz, xz, -3+zeros(size(tz)), 'color', cz)
-plot3(tp, xp, -3+zeros(size(tp)), 'color', cp)
-plot3(tz+tau, 3+zeros(size(tz)), xz, 'color', cz)
-plot3(tn+tau, 3+zeros(size(tn)), xn, 'color', cn)
+plot3(tz, xz, -3+zeros(size(tz)), 'color', cz, 'LineWidth', 2)
+plot3(tp, xp, -3+zeros(size(tp)), 'color', cp, 'LineWidth', 2)
+plot3(tz+tau, 3+zeros(size(tz)), xz, 'color', cz, 'LineWidth', 2)
+plot3(tn+tau, 3+zeros(size(tn)), xn, 'color', cn, 'LineWidth', 2)
 plot3(t, x0, x1, 'k', 'LineWidth', 2)
 
 view(3)
 zlabel('x(t-\tau)')
 ylabel('x(t)')
 xlabel('t')
-title('Delay Embedding', 'FontSize', FS)
+title('Delay Embedding', 'FontSize', 1.5*FS)
 pbaspect([6 3 3])
-figure(3)
+
+%% Component Measures
+figure(2)
 clf
 hold on
 plot(tn, xn, 'Color', cn, 'LineWidth', 3)
 plot(tz, xz, 'Color', cz, 'LineWidth', 3)
 plot(tp, xp, 'Color', cp, 'LineWidth', 3)
-% plot([0, 0], ylim, ':k', 'LineWidth', 2)
+plot([0, 0], ylim, ':k', 'LineWidth', 2)
 ylabel('x(t)')
 xlabel('t')
-title('Full Trajectory', 'FontSize', FS)
+title('Component Decomposition', 'FontSize', FS)
 
 
+%% Stacked Plot
 figure(4)
 clf
 subplot(2, 1, 1)
@@ -73,3 +77,19 @@ plot(tz + tau, xz, 'Color', cz, 'LineWidth', 3)
 title('Delayed Trajectory', 'FontSize', FS)
 ylabel('x(t-\tau)')
 xlabel('t')
+
+%% Trajectory and no coloring
+figure(2)
+clf
+hold on
+plot(tn, xn, 'Color', 'k', 'LineWidth', 3)
+plot(tz, xz, 'Color', 'k', 'LineWidth', 3)
+plot(tp, xp, 'Color', 'k', 'LineWidth', 3)
+plot([0, 0], ylim, ':k', 'LineWidth', 2)
+ylabel('x(t)')
+xlabel('t')
+title('Example History and Data', 'FontSize', FS)
+
+scatter(0, xz(1), 200, 'ok', 'LineWidth', 2)
+scatter(T, xp(end), 200, 'ok','LineWidth', 2)
+title('Marked Endpoints', 'FontSize', FS)

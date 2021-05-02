@@ -122,15 +122,13 @@ classdef delay_location_base < location_interface
             %TODO: Also figure out dual recovery
             X_history = obj.supp.get_X_history_supp();
             history_con = [];
+            if ~isa(X_history
+            mom_con_traj = obj.component.history_traj_con(d, X_history);
+%             history_con = [history_con; mom_con_traj];
             
-            %fixed supplied histories
-            if ~isa(X_history, 'supcon')
-                history_con = obj.component.history_traj_con(d, X_history);                
-            end
-
-            %free-time multiple histories
-            if obj.supp.FREE_TERM && isa(X_history, 'supcon')
-                history_con  = obj.component.history_free_con(d, X_history);               
+            if obj.supp.FREE_TERM
+                mom_con_free = obj.component.history_free_con(d, X_history);
+                history_con = [mom_con_traj; mom_con_free];
             end
             
             
@@ -186,15 +184,11 @@ classdef delay_location_base < location_interface
             len_dual.zeta = len_abscont;
             len_dual.phi  = len_consistency;
             len_dual.beta = length(cons_ineq);
+            len_dual.omega = len_history;
             
             %ensure this is the correct sign
 %             cons_eq = [-liou; abscont_box; consistency]==0;                        
-            cons_eq = [-liou; abscont_box; -consistency]==0;                        
-            
-            %history constraints perform moment substitution 
-            %this is permissible, because we know exactly what moments are
-            %being substituted.
-            cons_eq = [cons_eq; history];
+            cons_eq = [-liou; abscont_box; -consistency; history]==0;                        
         end     
         
         function [len_out] = len_eq_cons(obj)

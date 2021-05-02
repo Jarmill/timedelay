@@ -4,6 +4,8 @@
 %Only SI, R can be recovered later by integrating I
 %Jared Miller, 2/12/2021
 
+pos = [1243         607         550         336];
+
 %% model parameters
 beta = 0.4;
 gamma = 0.1;
@@ -21,7 +23,7 @@ p = @(s, i) i; %objective to maximize
 
 SOLVE       = 1;
 PLOT_TRAJ   = 1;
-PLOT_NONNEG = 1;
+PLOT_NONNEG = 0;
 
 order = 3;
 
@@ -41,11 +43,18 @@ sol = dde23(sir_delay, tau/Tmax, sir_history, Trange/Tmax, options);
 if PLOT_TRAJ
     figure(1)
     clf
-    plot([-tau, Tmax * sol.x], [xh0(2), sol.y(2, :)], 'DisplayName', 'Infection Rate')
+    hold on
+    plot([-tau, Tmax * sol.x], [xh0(2), sol.y(2, :)], 'DisplayName', 'Infection Rate', 'LineWidth', 2)
     
     title('Infection Rate of Epidemic', 'FontSize', 16)
     xlabel('time (days)')
     ylabel('infection rate')
+    
+    ylim([0, 0.6])
+    plot([0, 0], ylim, ':k', 'LineWidth', 2)
+    xlim([-tau, Tmax])
+    
+    set(gcf, 'position', pos)
 end
 
 %% Set up variables and measures
@@ -185,11 +194,11 @@ nonneg_1c = -phi1_f(t_traj, x0_traj);
 
 if PLOT_TRAJ
     hold on
-    scatter(t_traj(i_traj)*Tmax, x0_traj(2, i_traj), 300, '*r', 'DisplayName', 'true peak')
-    plot(xlim, obj_rec*[1, 1], '-.r', 'LineWidth', 3, 'DisplayName', 'bound peak')
-    if rp == 1
-        scatter(Mp_1(1, 2)*Tmax, Mp_1(1, 4), 300, 'or', 'DisplayName', 'recovered peak')
-    end
+    scatter(t_traj(i_traj)*Tmax, x0_traj(2, i_traj), 300, '*r', 'DisplayName', 'true peak', 'LineWidth', 2)
+%     plot(xlim, obj_rec*[1, 1], '-.r', 'LineWidth', 3, 'DisplayName', 'bound peak')
+%     if rp == 1
+%         scatter(Mp_1(1, 2)*Tmax, Mp_1(1, 4), 300, 'or', 'DisplayName', 'recovered peak')
+%     end
     hold off
     legend('location', 'west')
 end

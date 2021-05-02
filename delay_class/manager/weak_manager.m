@@ -14,7 +14,7 @@ classdef weak_manager < manager_interface
             
             %weak solution: fixed terminal time
             loc_supp.FREE_TERM = 0;
-            loc_supp.SCALE_TIME = 0; %change this later
+%             loc_supp.SCALE_TIME = 0; %change this later
             loc_curr = delay_location_base(loc_supp, f, 0);
             
             obj@manager_interface(loc_curr);

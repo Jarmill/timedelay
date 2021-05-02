@@ -4,6 +4,9 @@
 %Only SI, R can be recovered later by integrating I
 %Jared Miller, 2/12/2021
 
+%trajectory plot
+%pos = 1243         607         550         336
+
 %% model parameters
 beta = 0.4;
 gamma = 0.1;
@@ -46,11 +49,15 @@ m_traj = monom_int(sol.x, sol.y, dv);
 if PLOT_TRAJ
     figure(1)
     clf
-    plot([-tau, -1e-8, Tmax * sol.x], [xh0(2), xh0(2), sol.y(2, :)], 'DisplayName', ['Delay=', num2str(tau)])
+    hold on
+    plot([-tau, -1e-8, Tmax * sol.x], [xh0(2), xh0(2), sol.y(2, :)], 'DisplayName', ['Delay=', num2str(tau)], 'LineWidth', 2)
     
     title('Infection Rate of Epidemic', 'FontSize', 16)
     xlabel('time (days)')
     ylabel('infection rate')
+    ylim([0, 0.6])
+    plot([0, 0], ylim, ':k', 'LineWidth', 2)
+    xlim([-tau, Tmax])
 end
 
 %% Set up variables and measures
@@ -69,6 +76,7 @@ if SOLVE
                 tT == 1;
                 tnz * ( 1 - taus - tnz) >= 0;
                 (tnp - (1-taus)) * (1 - tnp) >= 0;
+                tri_con(sT, iT);
                 tri_con(s0, i0);
                 tri_con(s1, i1);
                 tri_con(snz, inz);

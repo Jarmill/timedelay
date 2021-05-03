@@ -54,6 +54,8 @@ classdef peak_delay_manager_base < manager_interface
             %beta: coefficients of cost (if able)
             %alpha: dual of zeno gaps
             
+            %TODO: Fill this in
+            
         end
         
         function sol = run(obj, order)

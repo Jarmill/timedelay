@@ -131,10 +131,9 @@ classdef meas_component < meas_collection
             
         end
         
-        function mom_con = history_free_con(obj, d)
+        function mom_con = history_free_con(obj, d, X_history)
             %MOM_HISTORY pin down t-marginal moments of history measures to
-            %the lebesgue measure in time on the appropriate interval
-            X_history = delay_supp.get_X_history_supp();
+            %the lebesgue measure in time on the appropriate interval            
              
             mom_con = [];
             if strcmp(class(X_history), 'supcon')

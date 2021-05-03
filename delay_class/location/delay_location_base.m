@@ -233,7 +233,7 @@ classdef delay_location_base < location_interface
                 obj.cost_q = q;
                 
                 obj_max = mom(q);
-                obj_con = [mass(q) == 1; (mom(q) <= mom(obj_subs));];
+                obj_con = [mass(q) == 1; (mom(q) <= obj_subs);];
             end            
         end
         

@@ -12,7 +12,7 @@ classdef peak_delay_manager_base < manager_interface
             
             %weak solution: fixed terminal time
             loc_supp.FREE_TERM = 1;
-            loc_supp.SCALE_TIME = 0; %change this later
+%             loc_supp.SCALE_TIME = 0; %change this later
             loc_curr = delay_location_base(loc_supp, f, objective);
             
             obj@manager_interface(loc_curr);

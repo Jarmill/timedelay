@@ -24,6 +24,7 @@ tau = 0.25;
 K0 = 3;
 K1 = 5;
 order = 4;
+% order = 5;
 
 % T = 1.5;
 % tau = 0.25;
@@ -40,9 +41,6 @@ order = 4;
 
 % tau = 0;
 
-p = @(x) x;     %objective in peak estimation
-
-
 %% plot the trajectory
 options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9, 'Jumps', 0, 'MaxStep', 1/T);
 %ddesd(dynamics, delay, history, time range, options)
@@ -58,7 +56,7 @@ if PLOT
     figure(1)
     clf
     hold on
-    plot([-tau sol.x], [-1 sol.y], 'DisplayName', 'trajectory')
+    plot([-tau sol.x], [xh0 sol.y], 'DisplayName', 'Open Loop')
     plot([-tau, T], [0, 0], ':k')
     xlim([-tau, T])
     hold off
@@ -71,31 +69,26 @@ end
 d = 2*order;
 
 mset clear
-mpol('t','x0','x1');mu  = meas(t, x0, x1);  %joint occupation measure
+mpol('t','x0','x1', 'u'); mu  = meas(t, x0, x1, u);  %joint occupation measure (controlled)
 mpol('tp', 'xp');   mup = meas(tp, xp);     %peak measure
 mpol('tnn', 'xnn'); nun = meas(tnn, xnn);   %component -1
 mpol('tnz', 'xnz'); nuz = meas(tnz, xnz);   %component  0
 mpol('tnp', 'xnp'); nup = meas(tnp, xnp);   %component  1
 
-%absolute continuity for peak estimation
-mpol('tnpc', 'xn1c'); nunc = meas(tnpc, xn1c);   %component 1 complement [0, T]
-
 %support constraints
 % tp == T
-supp_con = [tp*(T-tp) >= 0; 
+% umax = 3;
+umax = 1;
+supp_con = [tp == T; 
             tnz*((T - tau) - tnz) >= 0; 
             (tnp  - (T - tau)) * (T - tnp)  >= 0;
-            tnpc * (T - tnpc) >= 0;
             t*(T - t) >= 0;            
             x0^2 <= xh0^2;
             x1^2 <= xh0^2;
             xp^2 <= xh0^2;
             xnz^2 <= xh0^2;
             xnp^2 <= xh0^2;
-            xn1c^2 <= xh0^2;];
-%                     xnn == xh0; % redundant
-%             (tnn + tau) * tnn >= 0; %redundant
-        
+            u^2 <= umax^2];       
 %% monomials
 yp = mmon([tp, xp], d);
         
@@ -108,7 +101,9 @@ yh = history_mom(tau, xh0, dv);
 %% Affine relation
 %Liouville Equation
 v0  = mmon([t; x0], d);
-f = -K0*x0 -K1*x1; %dynamics
+f0 = -K0*x0 -K1*x1 ;
+f1 = 1;
+f = f0 + f1*u; %dynamics
 Ay = mom(diff(v0, t) + diff(v0, x0)*f); 
 Liou = Ay + y0 - mom(yp);
 % Liou = -(Ay + y0) + mom(yp);
@@ -130,21 +125,23 @@ mnz_shift = subs(mnz, tnz, tnz + tau);
 mnn = mmon([tnn; xnn], d);
 mnn_shift = subs(mnn, tnn, tnn + tau);
 
-%absolute continuity
-yc = mom(mmon([tnpc; xn1c], d));
-
-phi1 = mom(v1) + yc - mom(mnz_shift) - mom(mnn_shift);
+%terminal
+phi1 = mom(v1) - mom(mnz_shift) - mom(mnn_shift);
 
 
-
+%costs in control
+% R = 0.1;
+R=0.01;
+J =0.5*( x0^2 + R*u^2);
+JT = 0;
 %% moment constraints
-mom_con = [-Liou == 0;        %Liouville
+mom_con = [Liou == 0;        %Liouville
            -phi0 == 0;        %x(t)
            -phi1 == 0;        %x(t - tau)
            mom(mnn) == yh];  %history given
 
 %% Solve problem
-objective = max(mom(p(xp))); 
+objective = min(mom(J)+mom(JT)); 
 % objective = max(mass(nuz)); 
 mset('yalmip',true);
 mset(sdpsettings('solver', 'mosek'));
@@ -161,6 +158,8 @@ Mp = double(mmat(mup));
 Mp_1 = Mp(1:3, 1:3);
 rp = rank(Mp_1, 1e-3);
 
+Mocc = double(mmat(mu));
+
 %% Dual Functions
 
 dual_rec_1 = dual_rec{1};
@@ -169,32 +168,51 @@ coeff_v    = dual_rec_1(1:n_monom);
 coeff_phi0 = dual_rec_1(n_monom + (1:n_monom));
 coeff_phi1 = dual_rec_1(2*n_monom + (1:n_monom));
 
-v_rec = coeff_v'*v0;
+v_rec = coeff_v'*v0; 
+Lu_rec=diff(v_rec,x0)*f1;
 Lv_rec = diff(v_rec, t) + f * diff(v_rec, x0);
 v_f    = @(te, xe) eval(v_rec, [t; x0], [te; xe]);
-Lv_f    = @(te, x0e, x1e) eval(Lv_rec, [t; x0; x1], [te; x0e; x1e]);
+Lv_f    = @(te, x0e, x1e, ue) eval(Lv_rec, [t; x0; x1; u], [te; x0e; x1e; ue]);
 phi0_f = @(te, xe) eval(coeff_phi0'*v0, [t; x0], [te; xe]);
 phi1_f = @(te, xe) eval(coeff_phi1'*v0, [t; x0], [te; xe]);
+u_f =  @(te, x0e, x1e) eval(Lu_rec, [t; x0; x1], [te; x0e; x1e])/(-R); 
+u_clamp = @(te, x0e, x1e) min(umax, max(-umax, u_f(te, x0e, x1e))); 
+
+J_f = @(x0e, ue) eval(J, [x0;u], [x0e;ue]);
+JT_f = @(x0e) eval(JT, [x0], [x0e]);
+%% run closed loop trajectory
+
+f_closed = @(t,y,z) -K0*y-K1*z + u_clamp(t,y,z);
+sol_closed = dde23(f_closed, [tau],@(t) xh0,[0,T], options);
+
+if PLOT
+    hold on
+    plot([-tau sol_closed.x], [xh0 sol_closed.y], 'DisplayName', 'Closed Loop') 
+end
+     
 
 %% Analyze trajectory
 
 %trajectory interpolator
-ci = spline(sol.x, sol.y);
+ci = spline(sol_closed.x, sol_closed.y);
 ci.pieces = ci.pieces + 1;
 ci.breaks = [-tau ci.breaks];
 ci.coefs = [zeros(1, size(ci.coefs, 2)-1) xh0; ci.coefs];
 
-Nt = 1000;
+Nt = 300;
 t_traj = linspace(0, T, Nt);
 x0_traj = ppval(ci, t_traj);
 x1_traj = ppval(ci, t_traj - tau);
-[peak_traj,  i_traj] = max(p(x0_traj));
+u_traj = u_clamp(t_traj,x0_traj,x1_traj);
+% [peak_traj,  i_traj] = max(p(x0_traj));
 
-% nonneg_T = v_f(T, x0_traj(end));
 
-nonneg_cost = v_f(t_traj, x0_traj) - p(x0_traj);
 
-nonneg_flow = -(Lv_f(t_traj, x0_traj, x1_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj));
+nonneg_T = v_f(T, x0_traj(end)) + JT_f(x0_traj(end));
+v_traj = v_f(t_traj, x0_traj);
+
+nonneg_flow = -(Lv_f(t_traj, x0_traj, x1_traj, u_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj))...
+    +J_f(t_traj, x0_traj);
 
 tnu0_traj = linspace(0, T-tau, Nt);
 xnu0_traj = ppval(ci, tnu0_traj);
@@ -203,31 +221,23 @@ nonneg_0    = phi0_f(tnu0_traj, xnu0_traj) + phi1_f(tnu0_traj + tau, xnu0_traj);
 tnu1_traj = linspace(T-tau, T, floor(Nt/4));
 xnu1_traj = ppval(ci, tnu1_traj);
 nonneg_1    = phi0_f(tnu1_traj, xnu1_traj);
-
-nonneg_1c = -phi1_f(t_traj, x0_traj);
-
-if PLOT
-    hold on
-    scatter(t_traj(i_traj), x0_traj(i_traj), 300, '*r', 'DisplayName', 'true peak')
-    plot(xlim, obj_rec*[1, 1], '-.r', 'LineWidth', 3, 'DisplayName', 'recovered peak')
-    hold off
-    legend('location', 'southeast')
-end
     
+
+%% Plot nonnegativity
  if  PLOT_NONNEG    
     figure(2)
     clf
 %     tiledlayout(3, 1)
-    subplot(5,1,1)
+    subplot(3,1,1)
     plot(t_traj, nonneg_flow)
     xlim([0, T])
-    title('$\mu: \quad -(L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\mu: \quad J(x_0,u)-L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
     hold off
     
 %     nexttile
-    subplot(5,1,2)
+    subplot(3,1,2)
     plot(tnu0_traj, nonneg_0)
     xlim([0, T - tau])
     title('$\nu_0: \quad \phi_0(t, x) + \phi_1(t + \tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
@@ -236,36 +246,29 @@ end
     plot(xlim, [0, 0], ':k')
     hold off
     
-        
-    subplot(5,1,3)
-    plot(t_traj, nonneg_1c)
-    xlim([0, T])
-    title('$\hat{\nu}_1: \quad -\phi_1(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
-    hold on
-    plot(xlim, [0, 0], ':k')
-    hold off
+       
     
     
-    subplot(5,1,4)
+    subplot(3,1,3)
     plot(tnu1_traj, nonneg_1)
     xlim([T-tau, T])
     title('$\nu_1: \quad \phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
     hold off
+
+
+ figure(3) 
     
-    subplot(5, 1, 5 )
-    plot(t_traj, nonneg_cost)
+    plot(t_traj, v_traj)
     xlim([0, T])
-    title('$\mu_p: \quad v(t, x) - p(x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$v(t,x)$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
     hold off
- 
+ end
 
-end
-
-
+%% function definitions
 function m = history_mom(tau, x0, dv)
     %moments of (t: lebesgue of [-tau, 0]) times (x: delta at x0)
     alpha = dv(:, 1);

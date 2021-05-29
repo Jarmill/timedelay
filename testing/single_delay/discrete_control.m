@@ -24,7 +24,7 @@ tau = 0.25;
 K0 = 3;
 K1 = 5;
 % order = 4;
-order = 3;
+order = 6;
 % order = 5;
 
 % T = 1.5;
@@ -60,12 +60,13 @@ if PLOT
     subplot(2,1,1)
     hold on
     plot([-tau sol.x], [xh0 sol.y], 'DisplayName', 'Open Loop')
-    plot([-tau, T], [0, 0], ':k')
+%     plot([-tau, T], [0, 0], ':k')
+    plot([-tau, T], [0, 0], ':k', 'HandleVisibility', 'off')
     xlim([-tau, T])
     hold off
     xlabel('t')
     ylabel('x(t)')
-    title(['$\dot{x}(t) = -', num2str(K0), 'x(t) -', num2str(K1), 'x(t-', num2str(tau),')$'], 'interpreter', 'latex', 'fontsize', 16)
+    title(['$\dot{x}(t) = -', num2str(K0), 'x(t) -', num2str(K1), 'x(t-', num2str(tau),') + u(t)$'], 'interpreter', 'latex', 'fontsize', 16)
 end
 
 %% Set up variables and measures
@@ -190,7 +191,8 @@ sol_closed = dde23(f_closed, [tau],@(t) xh0,[0,T], options);
 
 if PLOT
     hold on
-    plot([-tau sol_closed.x], [xh0 sol_closed.y], 'DisplayName', 'Closed Loop') 
+    plot([-tau sol_closed.x], [xh0 sol_closed.y], 'DisplayName', 'Closed Loop')  
+  legend('location', 'northwest')
 end
      
 
@@ -214,6 +216,12 @@ u_traj = u_clamp(t_traj,x0_traj);
 nonneg_T = v_f(T, x0_traj(end)) + JT_f(x0_traj(end));
 v_traj = v_f(t_traj, x0_traj);
 
+phi1_traj = phi1_f(t_traj, x0_traj);
+phi1_delay_traj = phi1_f(t_traj - tau, x1_traj);
+
+
+phi1accum_traj = cumsimps(t_traj, phi1_traj) + coeff_phi1'*yh - cumsimps(t_traj - tau, phi1_delay_traj);
+
 nonneg_flow = -Lv_f(t_traj, x0_traj, x1_traj, u_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj)...
     +J_f(t_traj, x0_traj);
 
@@ -232,7 +240,7 @@ if PLOT
     plot(t_traj, u_traj)
     xlabel('t')
     ylabel('u(t)')
-    plot([-tau, T], [0, 0], ':k')
+    plot([-tau, T], [0, 0], ':k', 'HandleVisibility', 'off')
     xlim([-tau, T])
    title('Control $u(t)$','interpreter', 'latex', 'fontsize', 16)
     
@@ -253,7 +261,7 @@ end
 %     nexttile
     subplot(3,1,2)
     plot(tnu0_traj, nonneg_0)
-    xlim([0, T - tau])
+    xlim([0, T])
     title('$\nu_0: \quad -\phi_0(t, x) - \phi_1(t + \tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
     xlabel('time')
     hold on
@@ -265,7 +273,7 @@ end
     
     subplot(3,1,3)
     plot(tnu1_traj, nonneg_1)
-    xlim([T-tau, T])
+    xlim([0, T])
     title('$\nu_1: \quad -\phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
@@ -277,6 +285,14 @@ end
     plot(t_traj, v_traj)
     xlim([0, T])
     title('$v(t,x)$', 'interpreter', 'latex', 'fontsize', 14)
+    hold on
+    plot(xlim, [0, 0], ':k')
+    hold off
+ figure(4) 
+    clf
+    plot(t_traj, v_traj + phi1accum_traj)
+    xlim([0, T])
+    title('$V(t, x(t)) = v(t,x(t)) + \int_{t=0}^{\tau} \phi_1(t, x(t-\tau))$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
     hold off

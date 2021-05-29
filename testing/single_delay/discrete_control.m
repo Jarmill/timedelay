@@ -1,9 +1,9 @@
-% Peak estimation on trajectories of a delay differential equation
+% Optimal Control of a trajectory of a delay differential equation
 % x'(t) = -K0 x(t) -K1 x(t - tau) where the state history is constant
-% the objective is to maximize is p(x)
 %
 % Author: Jared Miller
-%         Feb 2, 2021.
+%         May 27, 2021.
+
 
 %% parameters
 PLOT = 1;
@@ -23,7 +23,8 @@ xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
 tau = 0.25;
 K0 = 3;
 K1 = 5;
-order = 4;
+% order = 4;
+order = 3;
 % order = 5;
 
 % T = 1.5;
@@ -55,6 +56,8 @@ end
 if PLOT
     figure(1)
     clf
+    
+    subplot(2,1,1)
     hold on
     plot([-tau sol.x], [xh0 sol.y], 'DisplayName', 'Open Loop')
     plot([-tau, T], [0, 0], ':k')
@@ -77,7 +80,7 @@ mpol('tnp', 'xnp'); nup = meas(tnp, xnp);   %component  1
 
 %support constraints
 % tp == T
-% umax = 3;
+% umax = 2;
 umax = 1;
 supp_con = [tp == T; 
             tnz*((T - tau) - tnz) >= 0; 
@@ -136,8 +139,8 @@ J =0.5*( x0^2 + R*u^2);
 JT = 0;
 %% moment constraints
 mom_con = [Liou == 0;        %Liouville
-           -phi0 == 0;        %x(t)
-           -phi1 == 0;        %x(t - tau)
+           phi0 == 0;        %x(t)
+           phi1 == 0;        %x(t - tau)
            mom(mnn) == yh];  %history given
 
 %% Solve problem
@@ -175,14 +178,14 @@ v_f    = @(te, xe) eval(v_rec, [t; x0], [te; xe]);
 Lv_f    = @(te, x0e, x1e, ue) eval(Lv_rec, [t; x0; x1; u], [te; x0e; x1e; ue]);
 phi0_f = @(te, xe) eval(coeff_phi0'*v0, [t; x0], [te; xe]);
 phi1_f = @(te, xe) eval(coeff_phi1'*v0, [t; x0], [te; xe]);
-u_f =  @(te, x0e, x1e) eval(Lu_rec, [t; x0; x1], [te; x0e; x1e])/(-R); 
-u_clamp = @(te, x0e, x1e) min(umax, max(-umax, u_f(te, x0e, x1e))); 
+u_f =  @(te, x0e) eval(Lu_rec, [t; x0], [te; x0e])/(-R); 
+u_clamp = @(te, x0e) min(umax, max(-umax, u_f(te, x0e))); 
 
 J_f = @(x0e, ue) eval(J, [x0;u], [x0e;ue]);
 JT_f = @(x0e) eval(JT, [x0], [x0e]);
 %% run closed loop trajectory
 
-f_closed = @(t,y,z) -K0*y-K1*z + u_clamp(t,y,z);
+f_closed = @(t,y,z) -K0*y-K1*z + u_clamp(t,y);
 sol_closed = dde23(f_closed, [tau],@(t) xh0,[0,T], options);
 
 if PLOT
@@ -203,7 +206,7 @@ Nt = 300;
 t_traj = linspace(0, T, Nt);
 x0_traj = ppval(ci, t_traj);
 x1_traj = ppval(ci, t_traj - tau);
-u_traj = u_clamp(t_traj,x0_traj,x1_traj);
+u_traj = u_clamp(t_traj,x0_traj);
 % [peak_traj,  i_traj] = max(p(x0_traj));
 
 
@@ -211,18 +214,29 @@ u_traj = u_clamp(t_traj,x0_traj,x1_traj);
 nonneg_T = v_f(T, x0_traj(end)) + JT_f(x0_traj(end));
 v_traj = v_f(t_traj, x0_traj);
 
-nonneg_flow = -(Lv_f(t_traj, x0_traj, x1_traj, u_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj))...
+nonneg_flow = -Lv_f(t_traj, x0_traj, x1_traj, u_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj)...
     +J_f(t_traj, x0_traj);
 
 tnu0_traj = linspace(0, T-tau, Nt);
 xnu0_traj = ppval(ci, tnu0_traj);
-nonneg_0    = phi0_f(tnu0_traj, xnu0_traj) + phi1_f(tnu0_traj + tau, xnu0_traj);
+nonneg_0    = -phi0_f(tnu0_traj, xnu0_traj) - phi1_f(tnu0_traj + tau, xnu0_traj);
 
 tnu1_traj = linspace(T-tau, T, floor(Nt/4));
 xnu1_traj = ppval(ci, tnu1_traj);
-nonneg_1    = phi0_f(tnu1_traj, xnu1_traj);
-    
+nonneg_1    = -phi0_f(tnu1_traj, xnu1_traj);
+      
 
+if PLOT
+    subplot(2,1,2)
+    hold on
+    plot(t_traj, u_traj)
+    xlabel('t')
+    ylabel('u(t)')
+    plot([-tau, T], [0, 0], ':k')
+    xlim([-tau, T])
+   title('Control $u(t)$','interpreter', 'latex', 'fontsize', 16)
+    
+end
 %% Plot nonnegativity
  if  PLOT_NONNEG    
     figure(2)
@@ -231,7 +245,7 @@ nonneg_1    = phi0_f(tnu1_traj, xnu1_traj);
     subplot(3,1,1)
     plot(t_traj, nonneg_flow)
     xlim([0, T])
-    title('$\mu: \quad J(x_0,u)-L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1))$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\mu: \quad J(x_0,u)-L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1)$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
     hold off
@@ -240,7 +254,7 @@ nonneg_1    = phi0_f(tnu1_traj, xnu1_traj);
     subplot(3,1,2)
     plot(tnu0_traj, nonneg_0)
     xlim([0, T - tau])
-    title('$\nu_0: \quad \phi_0(t, x) + \phi_1(t + \tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\nu_0: \quad -\phi_0(t, x) - \phi_1(t + \tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
     xlabel('time')
     hold on
     plot(xlim, [0, 0], ':k')
@@ -252,14 +266,14 @@ nonneg_1    = phi0_f(tnu1_traj, xnu1_traj);
     subplot(3,1,3)
     plot(tnu1_traj, nonneg_1)
     xlim([T-tau, T])
-    title('$\nu_1: \quad \phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\nu_1: \quad -\phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
     hold off
 
 
  figure(3) 
-    
+    clf
     plot(t_traj, v_traj)
     xlim([0, T])
     title('$v(t,x)$', 'interpreter', 'latex', 'fontsize', 14)

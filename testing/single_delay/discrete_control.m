@@ -6,52 +6,23 @@
 
 
 %% parameters
-PLOT = 1;
-PLOT_NONNEG = 1;
+PLOT = 0;
+PLOT_NONNEG = 0;
 T = 1;      %time horizon
 xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
-
-% tau = 0.4;  %delay x(t - tau)
-% K0 = 1;     %gain in dynamics x(t)
-% K1 = 4;     %gain in dynamics x(t-tau)
-% order = 4;
-
-% tau = 0.3;
-% K0 = 0.5;
-% K1 = 3;
 
 tau = 0.25;
 K0 = 3;
 K1 = 5;
-% order = 4;
-order = 6;
+order = 4;
+% order = 6;
 % order = 5;
+order=7;
 
-% T = 1.5;
-% tau = 0.25;
-% K0 = 3;
-% K1 = 5;
-% order = 8;      %relaxation order
-
-
-% tau = 0.1;
-% K0 = 1;
-% K1 = 10;
-% order = 8;      %relaxation order
-% 
-
-% tau = 0;
 
 %% plot the trajectory
 options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9, 'Jumps', 0, 'MaxStep', 1/T);
-%ddesd(dynamics, delay, history, time range, options)
-% sol = ddesd(@(t,y,z) -K*z, @(t,y) t-tau,@(t) xh0,[0,T], options);
-% sol = dde23(@(t,y,z) -K*z, [tau],@(t) xh0,[0,T], options);
-if tau == 0
-    sol = ode45(@(t,y) -K0*y, [0, T], xh0, options);
-else
-    sol = dde23(@(t,y,z) -K0*y-K1*z, [tau],@(t) xh0,[0,T], options);
-end
+sol = dde23(@(t,y,z) -K0*y-K1*z, [tau],@(t) xh0,[0,T], options);
 
 if PLOT
     figure(1)
@@ -75,7 +46,6 @@ d = 2*order;
 mset clear
 mpol('t','x0','x1', 'u'); mu  = meas(t, x0, x1, u);  %joint occupation measure (controlled)
 mpol('tp', 'xp');   mup = meas(tp, xp);     %peak measure
-mpol('tnn', 'xnn'); nun = meas(tnn, xnn);   %component -1
 mpol('tnz', 'xnz'); nuz = meas(tnz, xnz);   %component  0
 mpol('tnp', 'xnp'); nup = meas(tnp, xnp);   %component  1
 
@@ -100,8 +70,7 @@ yp = mmon([tp, xp], d);
 dv = genPowGlopti(2,d);
 y0 = prod([0, xh0].^dv, 2); %initial measure
 yh = history_mom(tau, xh0, dv);
-
-
+yh_shift = history_mom_shift(tau, xh0, dv);
 %% Affine relation
 %Liouville Equation
 v0  = mmon([t; x0], d);
@@ -126,12 +95,7 @@ mnz = mmon([tnz; xnz], d);
 mnz_shift = subs(mnz, tnz, tnz + tau);  
 
 %[-tau, 0] component
-mnn = mmon([tnn; xnn], d);
-mnn_shift = subs(mnn, tnn, tnn + tau);
-
-%terminal
-phi1 = mom(v1) - mom(mnz_shift) - mom(mnn_shift);
-
+phi1 = mom(v1) - mom(mnz_shift) - yh_shift;
 
 %costs in control
 % R = 0.1;
@@ -140,10 +104,8 @@ J =0.5*( x0^2 + R*u^2);
 JT = 0;
 %% moment constraints
 mom_con = [Liou == 0;        %Liouville
-           phi0 == 0;        %x(t)
-           phi1 == 0;        %x(t - tau)
-           mom(mnn) == yh];  %history given
-
+           phi0 == 0;        %Consistency x(t)
+           phi1 == 0];       %Consistency x(t - tau)
 %% Solve problem
 objective = min(mom(J)+mom(JT)); 
 % objective = max(mass(nuz)); 
@@ -152,17 +114,9 @@ mset(sdpsettings('solver', 'mosek'));
 P = msdp(objective, ...
     mom_con, supp_con);
 
-% solve LMIP moment problem
+% solve LMI  moment problem
 [status,obj_rec, m,dual_rec]= msol(P);
-obj_rec
-
-
-%peak extraction/estimation
-Mp = double(mmat(mup));
-Mp_1 = Mp(1:3, 1:3);
-rp = rank(Mp_1, 1e-3);
-
-Mocc = double(mmat(mu));
+obj_rec;
 
 %% Dual Functions
 
@@ -171,6 +125,8 @@ n_monom = length(Ay);
 coeff_v    = dual_rec_1(1:n_monom);
 coeff_phi0 = dual_rec_1(n_monom + (1:n_monom));
 coeff_phi1 = dual_rec_1(2*n_monom + (1:n_monom));
+
+phi1_int = coeff_phi1'*yh_shift;
 
 v_rec = coeff_v'*v0; 
 Lu_rec=diff(v_rec,x0)*f1;
@@ -184,6 +140,10 @@ u_clamp = @(te, x0e) min(umax, max(-umax, u_f(te, x0e)));
 
 J_f = @(x0e, ue) eval(J, [x0;u], [x0e;ue]);
 JT_f = @(x0e) eval(JT, [x0], [x0e]);
+
+obj_rec_dual = v_f(0, xh0) - phi1_int;
+
+% fprintf('Primal: %0.5f, Dual: %0.5f\n', obj_rec, obj_rec_dual)
 %% run closed loop trajectory
 
 f_closed = @(t,y,z) -K0*y-K1*z + u_clamp(t,y);
@@ -209,6 +169,11 @@ t_traj = linspace(0, T, Nt);
 x0_traj = ppval(ci, t_traj);
 x1_traj = ppval(ci, t_traj - tau);
 u_traj = u_clamp(t_traj,x0_traj);
+
+J_traj = J_f(x0_traj, u_traj);
+cost_traj = simps(t_traj, J_traj) + JT_f(x0_traj(end));
+
+fprintf('Primal:\t%0.5f\nDual:\t%0.5f\nTraj:\t%0.5f\n', obj_rec, obj_rec_dual, cost_traj)
 % [peak_traj,  i_traj] = max(p(x0_traj));
 
 
@@ -216,11 +181,11 @@ u_traj = u_clamp(t_traj,x0_traj);
 nonneg_T = v_f(T, x0_traj(end)) + JT_f(x0_traj(end));
 v_traj = v_f(t_traj, x0_traj);
 
-phi1_traj = phi1_f(t_traj, x0_traj);
-phi1_delay_traj = phi1_f(t_traj - tau, x1_traj);
+phi1_traj = phi1_f(t_traj+tau, x0_traj);
+phi1_delay_traj = phi1_f(t_traj, x1_traj);
 
 
-phi1accum_traj = cumsimps(t_traj, phi1_traj) + coeff_phi1'*yh - cumsimps(t_traj - tau, phi1_delay_traj);
+phi1accum_traj = cumsimps(t_traj, phi1_traj-phi1_delay_traj) + phi1_int;
 
 nonneg_flow = -Lv_f(t_traj, x0_traj, x1_traj, u_traj) + phi0_f(t_traj, x0_traj) + phi1_f(t_traj, x1_traj)...
     +J_f(t_traj, x0_traj);
@@ -290,9 +255,9 @@ end
     hold off
  figure(4) 
     clf
-    plot(t_traj, v_traj + phi1accum_traj)
+    plot(t_traj, v_traj - phi1accum_traj)
     xlim([0, T])
-    title('$V(t, x(t)) = v(t,x(t)) + \int_{t=0}^{\tau} \phi_1(t, x(t-\tau))$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$V(t, x(t)) = v(t,x(t)) - \int_{-\tau}^{0} \phi_1(t+s+\tau, x(t+s))ds$', 'interpreter', 'latex', 'fontsize', 14)
     hold on
     plot(xlim, [0, 0], ':k')
     hold off
@@ -309,6 +274,16 @@ function m = history_mom(tau, x0, dv)
     
     m = xmom .* tmom;
 end
+function m = history_mom_shift(tau, x0, dv)
+    %moments of (t: lebesgue of [0, tau]) times (x: delta at x0)
+    alpha = dv(:, 1);
+    beta  = dv(:, 2);
+    
+    tmom = (tau).^(alpha+1)./(alpha+1);
+    xmom = x0.^beta;
+    
+    m = xmom .* tmom;
+end 
 
 function em = monom_int(t, x, dv)
     %numerically integrate t^alpha x(t)^beta in span [0, T]

@@ -14,7 +14,7 @@ xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
 tau = 0.25;
 K0 = 3;
 K1 = 5;
-order =3;
+order =5;
 options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9, 'Jumps', 0, 'MaxStep', 1/T);
 
 sol_open = dde23(@(t,y,z) -K0*y-K1*z, [tau],@(t) xh0,[0,T], options);
@@ -62,35 +62,47 @@ yh = history_mom(tau/T, xh0, dv);
 obj_phi = yh'*c1;
 
 %maximizing objective
-objective = (obj_phi + obj_v);
 
 %% build the constraints
-%terminal
-vT = replace(v, t, 1);
-posterm = vT+JT;
-[pterm, consterm, coeffterm] = constraint_psatz(posterm, X, [x], d);
 
-%joint occupation
-Xjoint = struct('ineq', [t*(1-t); Xmax^2 - [x;x1].^2; umax^2-u^2]);
+vT = replace(v, t, 1);
+
+
+
 phi1joint = replace(phi1, x, x1); 
 
 Lv = jacobian(v,t) + f*jacobian(v,x);
-posjoint = J + phi0 + phi1joint - Lv;
+
+
+
+
+
+phi1_0 = replace(phi1, t, t+tau/T);
+
+
+
+% terms
+objective = (obj_phi + obj_v);
+%terminal
+posterm = vT+JT;
+%joint occupation
+posjoint = J+ phi0 + phi1joint - Lv;
+%times `zero' between 0 and T-tau 
+pos0=-(phi0+phi1_0);
+%times `one' between T-tau and T
+pos1=-phi0;
+
+%support sets
+Xjoint = struct('ineq', [t*(1-t); Xmax^2 - [x;x1].^2; umax^2-u^2]);
+
+X1 = struct('ineq', [(t-(T-tau)/T)*(1 -t); Xmax^2-x^2]);
+X0 = struct('ineq', [t*((T-tau)/T -t); Xmax^2-x^2]);
+%psatz expressions
+[pterm, consterm, coeffterm] = constraint_psatz(posterm, X, [x], d);
+[p1, cons1, coeff1] = constraint_psatz(pos1, X1, [t;x], d);
+[p0, cons0, coeff0] = constraint_psatz(pos0, X0, [t;x], d);
 [pjoint, consjoint, coeffjoint] = constraint_psatz(posjoint...
     , Xjoint, [t;x;x1;u], d);
-
-
-%times `zero' between 0 and T-tau 
-phi1_0 = replace(phi1, t, t+tau/T);
-X0 = struct('ineq', [t*((T-tau)/T -t); Xmax^2-x^2]);
-pos0=-(phi0+phi1_0);
-[p0, cons0, coeff0] = constraint_psatz(pos0, X0, [t;x], d);
-
-%times `one' between T-tau and T
-X1 = struct('ineq', [(t-(T-tau)/T)*(1 -t); Xmax^2-x^2]);
-pos1=-phi0;
-[p1, cons1, coeff1] = constraint_psatz(pos1, X1, [t;x], d);
-
 
 nonneg=[posjoint; pos0; pos1];
 cons = [cons; consjoint:'Joint'; cons0:'Time 0'; cons1:'Time 1'; consterm:'Terminal'];
@@ -122,11 +134,11 @@ phi1_eval = value(c1)'*m1;
 [cnn,mnn] = coefficients(nonneg,[t;x;x1;u]);
 nn_eval = value(cnn)*mnn;
 
-u_eval = jacobian(v_eval, x)*f1/(-R);
-
+u_eval = jacobian(v_eval, x)*f1/(R);
 
 %% now create functions.
 v_f = polyval_func(v_eval, [t;x]);
+phi1_f = polyval_func(phi1_eval, [t;x]);
 JT_f = polyval_func(JT, [x]);
 J_f = polyval_func(J, [x; u]);
 nonneg_f = polyval_func(nn_eval, [t;x;x1;u]);
@@ -135,15 +147,26 @@ u_f = @(te,xe) min(umax, max(-umax, uraw_f([te; xe])));
 
 f_closed = @(t,y,z) -K0*y-K1*z + u_f(t,y);
 sol_closed = dde23(f_closed, [tau],@(t) xh0,[0,T], options);
+
+%interpolate the past trajectory
+ci = spline(sol_closed.x, sol_closed.y);
+ci.pieces = ci.pieces + 1;
+ci.breaks = [-tau ci.breaks];
+ci.coefs = [zeros(1, size(ci.coefs, 2)-1) xh0; ci.coefs];
+sol_closed.yd = ppval(ci, sol_closed.x - tau);
+
+%analyze trajectory
 sol_closed.u = zeros(size(sol_closed.x));
 sol_closed.v = zeros(size(sol_closed.x));
 sol_closed.nonneg = zeros(3,size(sol_closed.x,1));
 sol_closed.dJ = zeros(size(sol_closed.x));
+sol_closed.phi1 = zeros(size(sol_closed.x));
+sol_closed.phi1_delay = zeros(size(sol_closed.x));
 for i = 1:length(sol_closed.x)
     sol_closed.u(i) = u_f(sol_closed.x(i), sol_closed.y(i)); 
     sol_closed.v(i) = v_f([sol_closed.x(i); sol_closed.y(i)]);
     
-    sol_closed.nonneg(:, i) = nonneg_f([sol_closed.x(i); sol_closed.y(i);sol_closed.yp(i); sol_closed.u(i)]);
+    sol_closed.nonneg(:, i) = nonneg_f([sol_closed.x(i); sol_closed.y(i);sol_closed.yd(i); sol_closed.u(i)]);
     if sol_closed.x(i) <= (T-tau)/T
         sol_closed.nonneg(3, i) = 0;
     else
@@ -154,11 +177,17 @@ for i = 1:length(sol_closed.x)
     
     sol_closed.dJ(i) = J_f([sol_closed.y(i); sol_closed.u(i)]);
     
+    sol_closed.phi1(i) = phi1_f([sol_closed.x(i)+tau/T, sol_closed.y(i)]);
     
+    sol_closed.phi1_delay(i)= phi1_f([sol_closed.x(i), sol_closed.yd(i)]);
 end
 sol_closed.nonneg_term = JT_f(sol_closed.y(end)) + v_f([sol_closed.x(end); sol_closed.y(end)]);
 sol_closed.J = simps(sol_closed.x, sol_closed.dJ);
 sol_closed.JT = JT_f(sol_closed.y(end)); 
+sol_closed.dphi1=sol_closed.phi1-sol_closed.phi1_delay;
+sol_closed.phi1_accum = cumsimps(sol_closed.x, sol_closed.dphi1);
+
+sol_closed.value = -sol_closed.v - sol_closed.phi1_accum - value(obj_phi);
 end
 
 %% create plots
@@ -210,14 +239,25 @@ if PLOT
     
         ax2 = nexttile;
     plot(sol_closed.x, sol_closed.nonneg(2, :))
-    title('$\nu_0: \quad \phi_0(t, x) + \phi_1(t + \tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\nu_0: \quad -\phi_0(t, x) - \phi_1(t + \tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
     
         ax3 = nexttile;
       
     plot(sol_closed.x, sol_closed.nonneg(3, :))
-     title('$\nu_1: \quad \phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+     title('$\nu_1: \quad -\phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     
     linkaxes([ax1,ax2,ax3],'x')
+    
+        figure(4)
+    clf
+    hold on
+    plot(sol_closed.x, sol_closed.value)
+    xlabel('t')
+    title('$V(t, x(t)) = v(t,x(t)) - \int_{-\tau}^{0} \phi_1(t+s+\tau, x(t+s))ds$', 'interpreter', 'latex', 'fontsize', 14)
+    plot([0, T], [0, 0], ':k')
+     xlim([0, T])
+    ylabel('$V(t,x(t))$', 'interpreter', 'latex')
+    
 
 end
 %% function definitions

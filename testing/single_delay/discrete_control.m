@@ -14,10 +14,10 @@ xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
 tau = 0.25;
 K0 = 3;
 K1 = 5;
-order = 4;
+order = 3;
 % order = 6;
 % order = 5;
-order=7;
+% order=7;
 
 
 %% plot the trajectory

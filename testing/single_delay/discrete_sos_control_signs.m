@@ -2,7 +2,9 @@
 % x'(t) = -K0 x(t) -K1 x(t - tau) where the state history is constant
 %
 % Author: Jared Miller
-%         May 28, 2021.
+%         June 9, 2021.
+
+%This has a different sign convention and will hopefully work
 
 %% parameters
 SOLVE = 1;
@@ -34,11 +36,12 @@ umax=1;
 Xmax = 1;
 X=struct('ineq', Xmax^2-x^2);
 %Dynamics and costs
-R = 0.01;
+R = 0.05;
 J = 0.5*(x^2 + R*u^2); 
 JT = 0;
 
 f0 = -K0*x-K1*x1 ;
+% f1 = 1;
 f1 = 1;
 f = T*(f0 + f1*u);
 
@@ -61,36 +64,27 @@ yh = history_mom(tau/T, xh0, dv);
 
 obj_phi = yh'*c1;
 
-%maximizing objective
-
 %% build the constraints
 
 vT = replace(v, t, 1);
-
-
-
 phi1joint = replace(phi1, x, x1); 
 
 Lv = jacobian(v,t) + f*jacobian(v,x);
-
-
-
-
 
 phi1_0 = replace(phi1, t, t+tau/T);
 
 
 
 % terms
-objective = (obj_phi + obj_v);
+objective = -(obj_phi + obj_v);
 %terminal
-posterm = vT+JT;
+posterm = -vT+JT;
 %joint occupation
-posjoint = J+ phi0 + phi1joint - Lv;
+posjoint = J-phi0 - phi1joint + Lv;
 %times `zero' between 0 and T-tau 
-pos0=-(phi0+phi1_0);
+pos0= (phi0+phi1_0);
 %times `one' between T-tau and T
-pos1=-phi0;
+pos1= phi0;
 
 %support sets
 Xjoint = struct('ineq', [t*(1-t); Xmax^2 - [x;x1].^2; umax^2-u^2]);
@@ -107,7 +101,7 @@ X0 = struct('ineq', [t*((T-tau)/T -t); Xmax^2-x^2]);
 nonneg=[posjoint; pos0; pos1];
 cons = [cons; consjoint:'Joint'; cons0:'Time 0'; cons1:'Time 1'; consterm:'Terminal'];
 
-coeff = [coeff; coeffterm; coeffjoint; coeff0; coeff1];
+coeff = [coeff; coeffjoint; coeff0; coeff1; coeffterm];
 
 %% Solve problemv 
 
@@ -128,13 +122,13 @@ cost_val = value(objective);
 v_eval = value(cv)'*mv;      
 [c0,m0] = coefficients(phi0, [t;x]);
 phi0_eval = value(c0)'*m0;      
-[c1,m1] = coefficients(v, [t;x]);
+[c1,m1] = coefficients(phi1, [t;x]);
 phi1_eval = value(c1)'*m1;      
  
 [cnn,mnn] = coefficients(nonneg,[t;x;x1;u]);
 nn_eval = value(cnn)*mnn;
 
-u_eval = jacobian(v_eval, x)*f1/(R);
+u_eval = jacobian(v_eval, x)*f1/(-R);
 
 %% now create functions.
 v_f = polyval_func(v_eval, [t;x]);
@@ -149,6 +143,7 @@ f_closed = @(t,y,z) -K0*y-K1*z + u_f(t,y);
 sol_closed = dde23(f_closed, [tau],@(t) xh0,[0,T], options);
 
 %interpolate the past trajectory
+%only valid on constant history
 ci = spline(sol_closed.x, sol_closed.y);
 ci.pieces = ci.pieces + 1;
 ci.breaks = [-tau ci.breaks];
@@ -167,6 +162,8 @@ for i = 1:length(sol_closed.x)
     sol_closed.v(i) = v_f([sol_closed.x(i); sol_closed.y(i)]);
     
     sol_closed.nonneg(:, i) = nonneg_f([sol_closed.x(i); sol_closed.y(i);sol_closed.yd(i); sol_closed.u(i)]);
+    
+    %component nonnegativity only valid in certain time ranges.
     if sol_closed.x(i) <= (T-tau)/T
         sol_closed.nonneg(3, i) = 0;
     else
@@ -177,17 +174,18 @@ for i = 1:length(sol_closed.x)
     
     sol_closed.dJ(i) = J_f([sol_closed.y(i); sol_closed.u(i)]);
     
-    sol_closed.phi1(i) = phi1_f([sol_closed.x(i)+tau/T, sol_closed.y(i)]);
+    sol_closed.phi1(i) = phi1_f([sol_closed.x(i)+tau/T; sol_closed.y(i)]);
     
-    sol_closed.phi1_delay(i)= phi1_f([sol_closed.x(i), sol_closed.yd(i)]);
+    sol_closed.phi1_delay(i)= phi1_f([sol_closed.x(i); sol_closed.yd(i)]);
 end
-sol_closed.nonneg_term = JT_f(sol_closed.y(end)) + v_f([sol_closed.x(end); sol_closed.y(end)]);
+sol_closed.nonneg_term = JT_f(sol_closed.y(end)) - v_f([sol_closed.x(end); sol_closed.y(end)]);
 sol_closed.J = simps(sol_closed.x, sol_closed.dJ);
 sol_closed.JT = JT_f(sol_closed.y(end)); 
 sol_closed.dphi1=sol_closed.phi1-sol_closed.phi1_delay;
+
 sol_closed.phi1_accum = cumsimps(sol_closed.x, sol_closed.dphi1);
 
-sol_closed.value = -sol_closed.v - sol_closed.phi1_accum - value(obj_phi);
+sol_closed.value = sol_closed.v + sol_closed.phi1_accum + value(obj_phi);
 end
 
 %% create plots
@@ -235,16 +233,16 @@ if PLOT
     tiledlayout(3,1)
     ax1 = nexttile;
     plot(sol_closed.x, sol_closed.nonneg(1, :))
-    title('$\mu: \quad J(x_0,u)-L_f v(t, x_0) + \phi_0(t, x_0) + \phi_1(t, x_1)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\mu: \quad J(x_0,u) + L_f v(t, x_0) - \phi_0(t, x_0) - \phi_1(t, x_1)$', 'interpreter', 'latex', 'fontsize', 14)
     
         ax2 = nexttile;
     plot(sol_closed.x, sol_closed.nonneg(2, :))
-    title('$\nu_0: \quad -\phi_0(t, x) - \phi_1(t + \tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$\nu_0: \quad \phi_0(t, x) + \phi_1(t + \tau, x)$', 'interpreter', 'latex', 'fontsize', 14)
     
         ax3 = nexttile;
       
     plot(sol_closed.x, sol_closed.nonneg(3, :))
-     title('$\nu_1: \quad -\phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
+     title('$\nu_1: \quad \phi_0(t, x)$', 'interpreter', 'latex', 'fontsize', 14)
     
     linkaxes([ax1,ax2,ax3],'x')
     
@@ -253,7 +251,7 @@ if PLOT
     hold on
     plot(sol_closed.x, sol_closed.value)
     xlabel('t')
-    title('$V(t, x(t)) = v(t,x(t)) - \int_{-\tau}^{0} \phi_1(t+s+\tau, x(t+s))ds$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$V(t, x(t)) = v(t,x(t)) - \int_{t-\tau}^{t} \phi_1(s+\tau, x(s))ds$', 'interpreter', 'latex', 'fontsize', 14)
     plot([0, T], [0, 0], ':k')
      xlim([0, T])
     ylabel('$V(t,x(t))$', 'interpreter', 'latex')

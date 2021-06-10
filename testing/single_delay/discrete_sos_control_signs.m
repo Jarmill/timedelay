@@ -16,7 +16,7 @@ xh0 = -1;   %constant history x(t) = xh0 for times [-tau, 0]
 tau = 0.25;
 K0 = 3;
 K1 = 5;
-order =3;
+order =4;
 options = ddeset('AbsTol', 1e-11, 'RelTol', 1e-9, 'Jumps', 0, 'MaxStep', 1/T);
 
 sol_open = dde23(@(t,y,z) -K0*y-K1*z, [tau],@(t) xh0,[0,T], options);
@@ -36,7 +36,7 @@ umax=1;
 Xmax = 1;
 X=struct('ineq', Xmax^2-x^2);
 %Dynamics and costs
-R = 0.05;
+R = 0.01;
 J = 0.5*(x^2 + R*u^2); 
 JT = 0;
 
@@ -166,15 +166,18 @@ for i = 1:length(sol_closed.x)
     %component nonnegativity only valid in certain time ranges.
     if sol_closed.x(i) <= (T-tau)/T
         sol_closed.nonneg(3, i) = 0;
+        sol_closed.phi1(i) = phi1_f([sol_closed.x(i)+tau/T; sol_closed.y(i)]);
+    
     else
         sol_closed.nonneg(2, i) = 0;
+        sol_closed.phi1(i) =0;
+    
     end
     
     sol_closed.v(i) = v_f([sol_closed.x(i); sol_closed.y(i)]);
     
     sol_closed.dJ(i) = J_f([sol_closed.y(i); sol_closed.u(i)]);
     
-    sol_closed.phi1(i) = phi1_f([sol_closed.x(i)+tau/T; sol_closed.y(i)]);
     
     sol_closed.phi1_delay(i)= phi1_f([sol_closed.x(i); sol_closed.yd(i)]);
 end
@@ -184,6 +187,10 @@ sol_closed.JT = JT_f(sol_closed.y(end));
 sol_closed.dphi1=sol_closed.phi1-sol_closed.phi1_delay;
 
 sol_closed.phi1_accum = cumsimps(sol_closed.x, sol_closed.dphi1);
+
+
+sol_open.dJ = 0.5*sol_open.y.^2;
+sol_open.J = simps(sol_open.x, sol_open.dJ);
 
 sol_closed.value = sol_closed.v + sol_closed.phi1_accum + value(obj_phi);
 end
@@ -198,14 +205,14 @@ if PLOT
     nexttile;
     hold on
     plot([-tau sol_open.x], [xh0 sol_open.y], 'DisplayName', 'Open Loop')
-    plot([-tau sol_closed.x], [xh0 sol_closed.y], 'DisplayName', 'Open Loop')
-    plot([-tau, T], [0, 0], ':k')
+    plot([-tau sol_closed.x], [xh0 sol_closed.y], 'DisplayName', 'Closed Loop')
+    plot([-tau, T], [0, 0], ':k', 'HandleVisibility', 'off')
     xlim([-tau, T])
     hold off
     xlabel('t')
     ylabel('x(t)')
     title(['$\dot{x}(t) = -', num2str(K0), 'x(t) -', num2str(K1), 'x(t-', num2str(tau),') + u(t)$'], 'interpreter', 'latex', 'fontsize', 16)
-    
+    legend('location', 'northwest')
 
     nexttile;
     hold on
@@ -251,7 +258,7 @@ if PLOT
     hold on
     plot(sol_closed.x, sol_closed.value)
     xlabel('t')
-    title('$V(t, x(t)) = v(t,x(t)) - \int_{t-\tau}^{t} \phi_1(s+\tau, x(s))ds$', 'interpreter', 'latex', 'fontsize', 14)
+    title('$V(t, x(t)) = v(t,x(t)) + \int_{t}^{\min(t+\tau, T)} \phi_1(s, x(s-\tau))ds$', 'interpreter', 'latex', 'fontsize', 14)
     plot([0, T], [0, 0], ':k')
      xlim([0, T])
     ylabel('$V(t,x(t))$', 'interpreter', 'latex')

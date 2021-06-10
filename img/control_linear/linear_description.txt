@@ -1,0 +1,23 @@
+This is the output of optimal control of a linear system
+
+x'(t) = -3x(t) - 5x(t-0.25) + u
+
+The initial history is x(t) = -1 between times [-0.25, 0]
+
+The simulation runs until a terminal time of T = 1
+
+The state cost is J = 0.5 x^2 + 0.5*R*u^2 with R = 0.01
+The terminal cost is JT = 0
+
+In open loop, the total cost is 0.0674
+
+The closed loop control allows for u^2 <= 1
+
+At an order 4 relaxation, the control bound is 0.0391
+
+Applying the HJB control yields a total cost of 0.0394
+
+The terminal nonnegativity constraint is 1.6902e-07.
+
+The flow nonneg has a max value of 10^-3, and the other nonneg constraints
+have max values of around 10^-5.

@@ -11,7 +11,11 @@ tau = 0.75;       % lag
 C0 = [1.5; 0];
 R0 = 0.4;
 
-order = 4;
+
+% order = 1; %-1.2500 
+% order = 2; %-1.2382 
+% order = 3; %-1.2044
+order = 4;  %-1.1820 
 % d = order*2;
 
 %% system variables

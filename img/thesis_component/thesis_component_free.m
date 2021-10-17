@@ -47,7 +47,7 @@ tp = linspace(Tmax-tau, Tmax, 100*tau);
 xp = deval(traj, tp);
 
 
-Tstop = 4;
+Tstop = 3;
 xstop = deval(traj, Tstop);
 xstop_delay = deval(traj, Tstop-tau);
 
@@ -77,7 +77,7 @@ plot(tz(tz <= Tstop) + tau, xz(tz <= Tstop), 'Color', cz, 'LineWidth', 3)
 scatter(Tstop + tau, xstop, 200, '*k', 'LineWidth', 2)
 title('Delayed Trajectory', 'FontSize', FS)
 ylabel('x(t-\tau)')
-xlim([0, T])
+xlim([0, Tmax])
 
 linkaxes([ax1, ax2])
 xlabel('time')
@@ -111,7 +111,7 @@ scatter(Tstop + tau, xstop, 200, '*k', 'LineWidth', 2)
 scatter(Tstop, xstop_delay, 200, 'ok', 'LineWidth', 2)
 title('Delayed Trajectory (Stopped)', 'FontSize', FS)
 ylabel('x(t-\tau)')
-xlim([0, T])
+xlim([0, Tmax])
 
 linkaxes([ax1, ax2])
 

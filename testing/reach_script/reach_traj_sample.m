@@ -9,7 +9,7 @@ K1 = 4;
 T = 1;
 
 xh0_min = -1;
-xh0_max = -0.6;
+xh0_max = -0.9;
 sample_x = @() xh0_min + (xh0_max - xh0_min)*rand();
 
 
@@ -25,7 +25,8 @@ f_dde = @(t, x, Z) -K0*x-K1*Z;
 
 %history sampler
 box_lim = 1;
-Npts = 10;
+% Npts = 10;
+Npts = 20;
 box_event = @(t, x, Z) supp_event(box_lim, t, x, Z);
 dde_options = ddeset('AbsTol', 1e-9, 'RelTol', 1e-7, 'Jumps', [0], ...
                      'MaxStep', 0.1, 'Events', box_event);
@@ -35,7 +36,8 @@ dde_options = ddeset('AbsTol', 1e-9, 'RelTol', 1e-7, 'Jumps', [0], ...
 %% Sample Trajectories
 if SAMPLE
 % Nsample = 150;
-Nsample = 100;
+% Nsample = 100;
+Nsample = 300;
 out_dde = cell(Nsample, 1);
 for i = 1:Nsample
     [f_history, t_pts, x_pts] = history_handle(sample_x, tau, Npts);

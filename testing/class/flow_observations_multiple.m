@@ -1,4 +1,4 @@
-SAMPLE = 1;
+SAMPLE = 0;
 PLOT = 1;
 
 rng(43, 'twister')
@@ -67,13 +67,13 @@ clf
 hold on
 % plot(x_ode(:, 1), x_ode(:, 2))
 i = 20;
-% for i = 1:Nsample
+for i = 1:Nsample
     plot(out_dde{i}.xhist(:, 1), out_dde{i}.xhist(:, 2), 'color', 0.7*[1,1,1]);    
-% end
+end
 
-% for i =1:Nsample
+for i =1:Nsample
     plot(out_dde{i}.x(:, 1), out_dde{i}.x(:, 2), 'c');
-% end
+end
 
 theta = linspace(0, 2*pi, 100);
 circ = R0 * [cos(theta); sin(theta)] + C0;

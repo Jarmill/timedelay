@@ -11,7 +11,7 @@ tau = 0.5;       % lag
 C0 = [1.5; 0];
 R0 = 0.4;
 
-order = 3;
+order = 4; %success at order 4: -0.0351
 % d = order*2;
 
 %% system variables

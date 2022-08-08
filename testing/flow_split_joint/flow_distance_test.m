@@ -1,19 +1,23 @@
 
-%dual formulation
-%come back to this later
+%dual formulation for peak estimation of dde
+
+%% setup
 
 %variables
 t = sdpvar(1,1);
 x0 = sdpvar(2,1);
 x1 = sdpvar(2,1);
+y = sdpvar(2, 1);
 
 %parameters and dynamics 
-T = 5;
-tau = 0.5;
-<<<<<<< Updated upstream
-ts = tau/T;
+% Tmax = 5; %safe at order 3, p^* = -0.0343 < 0
+          %dist_rec = 0.3046, order 3
+          
+%the safety margin fails, but the distance is successful
+% Tmax = 8; % order 3: 0.1572, order 4: 0.1820
+Tmax = 10;
 
-=======
+tau = 0.5;
 ts = tau/Tmax;
 
 f = [x0(2); -x1(1) + (1/3).*x0(1).^3- x0(2)];
@@ -26,44 +30,47 @@ C0 = [1.5; 0];
 R0 = 0.4;
 
 %unsafe set
-Cu = [0; -0.7];
-%Cu = [2.5; 0];
-Ru = 0.5; 
-w_c = -[1; 1];
+Cu = [-0.5; -1];
+Ru = 0.5;
+theta_c = 5*pi/4;       %p* = -0.1417, beta = [0, 1], safe
+
+w_c = [cos(theta_c); sin(theta_c)];
 c1f = Ru^2 - (x0(1) - Cu(1)).^2 - (x0(2) - Cu(2)).^2;
 % w_c = [cos(theta_c); sin(theta_c)];
 c2f = w_c(1)*(x0(1) - Cu(1)) + w_c(2) * (x0(2) - Cu(2)); 
 
 cf = [c1f; c2f];
+cfy = replace(cf, x0, y);
 
->>>>>>> Stashed changes
-order = 2;
+c = sum((x0-y).^2);
+
+order = 3;
 d=2*order;
 
-%functions
-<<<<<<< Updated upstream
-v = polynomial([t; x0], d);
-phi = polynomial([t; x0], d);
-xi = polynomial(t, d); 
- 
+%objective
+p = x0(2);
 
-leb_mom = -(ts).^(1:(d+1)) ./ (1:(d+1));
-=======
+%functions
 [v, cv] = polynomial([t; x0], d);
+[w, cw] = polynomial([x0], d);
 [phi, cphi] = polynomial([t; x0], d);
 [xi, cxi] = polynomial(t, d); 
 gamma = sdpvar(1,1);
 
-leb_mom = LebesgueBoxMom( d, [-ts; 0], 1);
->>>>>>> Stashed changes
 
-%support sets
+leb_mom = LebesgueBoxMom( d, [-ts; 0], 1);
+
+Lv = jacobian(v, t) + Tmax * jacobian(v,x0)*f;
+
+v0 = replace(v, t, 0);
+
+
+%% support sets
 % X0 = 
 % Xu = 
-<<<<<<< Updated upstream
-X = struct('ineq', 
-=======
-box = [-1.25, 2.5; -1.25, 1.5];
+% box = [-1.25, 2.5; -1.25, 1.5];
+% box = [-1.25, 2.5; -1.5, 1.1];
+box = [-1, 2.5; -1.5, 1.1];
 X0 = [(x0 - box(:, 1)).*(box(:, 2) - x0)];
 X1 = replace(X0, x0, x1);
 tp = t*(1-t);
@@ -83,7 +90,9 @@ phishift = replace(phi, t, t+ts);
 
 [p0, cons0, coeff0] = constraint_psatz(v0 - gamma, H0, [x0], d);
 % 
-[pc, consc, coeffc] = constraint_psatz(p - v, [tp; X0], [t; x0], d);
+[pc, consc, coeffc] = constraint_psatz(w- v, [tp; X0], [t; x0], d);
+
+[pdist, consdist, coeffdist] = constraint_psatz(c - w, [X0; cfy], [x0; y], d);
 
 % [plie0, conslie0, coefflie0] = constraint_psatz(Lv , [t0; X0], [t; x0], d+2);
 % [plie0, conslie0, coefflie0] = constraint_psatz(Lv , [t0; X0; X1], [t; x0; x1], d+2);
@@ -97,8 +106,6 @@ phishift = replace(phi, t, t+ts);
 [pfree, consfree, coefffree] = constraint_psatz(-phi, [tp; X0], [t; x0], d);
 
 
-
-
 %% accumulate constraints
 objective = -(gamma + leb_mom'*cxi);
 
@@ -109,9 +116,9 @@ objective = -(gamma + leb_mom'*cxi);
 % cons = [cons0; consc; consh; conslie0; conslie1; consfree];
 
 %progressively adding constraints
-coeff = [cv; gamma; cxi; cphi;
-    coeff0; coeffc; coeffh; coefflie0; coefflie1; coefffree];
-cons = [cons0; consc; consh; conslie0; conslie1; consfree];
+coeff = [cv; gamma; cxi; cphi; cw; 
+    coeff0; coeffc; coeffh; coefflie0; coefflie1; coefffree; coeffdist];
+cons = [cons0; consc; consh; conslie0; conslie1; consfree; consdist];
 
 %adding the cxi term causes infeasibility
 
@@ -126,4 +133,6 @@ opts = sdpsettings('solver','mosek');
 
 [sol, monom, Gram, residual] = solvesos(cons, objective, opts, [coeff]);
 
->>>>>>> Stashed changes
+
+dist_rec = sqrt(-value(objective))
+% value(objective)

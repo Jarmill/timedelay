@@ -87,15 +87,7 @@ classdef meas_joint_split < meas_collection
         end
         
         %% getters        
-        function vars_out = get_vars(obj)
-            %GET_VARS get variables in measure
-            varnames = fields(obj.vars);
-            vars_out = [];
-            for i = 1:length(varnames)
-                curr_var = varnames{i};
-                vars_out = [vars_out; reshape(obj.vars.(curr_var), [], 1)];
-            end
-        end       
+
         
         function mom_out = mom_monom_marg(obj, ind_lag, dmin, dmax)
             %MOM_MONOM_MARG get moments of the marginals of the joint 
@@ -142,7 +134,8 @@ classdef meas_joint_split < meas_collection
             else
                 %there is a nontrivial delay shift
                 
-                var_shift = [obj.vars.t-obj.lags(ind_lag); obj.vars.x];
+                %TODO: check this. is it (t+tau) or (t-tau)?
+                var_shift = [obj.vars.t+obj.lags(ind_lag); obj.vars.x];
                 nvar = length(var_shift);
                 
                 %monomial generation copied over from @mpol/mmon

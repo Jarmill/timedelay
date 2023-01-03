@@ -49,15 +49,27 @@ d = 2*order;
 
 %% split occupation measure
 
-sys = delay_system_base_split(lsupp, f);
-lie = sys.cons_liou(d);
-
-c0 = sys.meas_occ.mom_monom_marg(0, 2);
-c1 = sys.meas_occ.mom_monom_marg(1, 2);
-c1_shift = sys.meas_occ.mom_monom_shift(1, 2);
-c2_shift = sys.meas_occ.mom_monom_shift(2, 2);
+% sys = delay_system_base_split(lsupp, f);
+% lie = sys.cons_liou(d);
+% 
+% c0 = sys.meas_occ.mom_monom_marg(0, 2);
+% c1 = sys.meas_occ.mom_monom_marg(1, 2);
+% c1_shift = sys.meas_occ.mom_monom_shift(1, 2);
+% c2_shift = sys.meas_occ.mom_monom_shift(2, 2);
 % occ = meas_joint_split(lsupp);
 
+%% history occupation measure
+H = meas_history(lsupp);
+
+mh0 = H.mom_shift(0, 2);
+mh1 = H.mom_shift(1, 2);
+mh2 = H.mom_shift(2, 2);
+
+mf = H.history_free_con(d, lsupp.X_history);
+
+mconst = H.shaping_mom_const(d)
+% HC2 = H.history_traj_con(d, [0.8; 0.2; 0])
+% HC2_slide = H.history_traj_con(d, @(t) [0.8.*t; 0.2.*t; 0.*t])
 %% subsystem
 % 
 % sys_std = delay_system_base(lsupp, f);

@@ -28,6 +28,8 @@ classdef delay_location_base_split < location_interface
             %scale down the lags
             if obj.supp.SCALE_TIME
                 obj.supp.lags = obj.supp.lags/Tmax;    
+                delay_supp.lags = obj.supp.lags;
+                delay_supp.Tmax = 1;
             end
             
             Nsys = length(obj.f);
@@ -44,9 +46,6 @@ classdef delay_location_base_split < location_interface
 
             %history measure
             obj.history = meas_history(delay_supp);
-            
-            %consistency measures
-%             obj.component = meas_component(obj.supp);
 
             %slack measure for free terminal time
             if obj.supp.FREE_TERM
@@ -74,37 +73,42 @@ classdef delay_location_base_split < location_interface
             
         end
         
-        %% constraints
-        
+        %% constraints        
         function [cons, len_consistency] = consistency_con(obj, d)
             %CONSISTENCY_CON Data consistency constraints between joint
             %occupation measure and marginals of the component measure
             Nlag = length(obj.supp.lags);
             
             cons = [];
-            len_consistency = zeros(Nlag+1, 1);
-            for i = 0:Nlag
-                cons_curr = 0;
+            len_consistency = zeros(Nlag, 1);
+            for i = 1:Nlag
+%                 cons_curr = 0;
 %                 for j = 1:length(obj.sys)
 %                     cons_curr = 
                 %marginal of the joint occupation measure
-                cons_curr = cons_curr + obj.sys{1}.mom_marg(i, d);
+                term_marg =  obj.sys{1}.meas_occ.mom_monom_marg(i, d);
                 
                 %shifted marginals of the component measures
-                cons_curr = cons_curr - obj.component.mom_shift(i, d);
+                term_shift= obj.sys{1}.meas_occ.mom_monom_shift(i, d);
+                
+                %shifted marginals of the history measure
+                term_history = obj.history.mom_shift(i, d);
                 
                 %slack in case there is free terminal time
-                if obj.supp.FREE_TERM && i > 0
-                    cons_curr = cons_curr + obj.time_slack.mom_index(i, d);
+                if obj.supp.FREE_TERM
+                    term_slack = obj.time_slack.mom_index(i, d);
+                else
+                    term_slack = 0;
                 end
                 
-                cons = [cons; cons_curr];
+                term_lhs = (term_marg + term_slack);
+                term_rhs = (term_shift + term_history);
+                
+                cons = [cons;  (term_lhs - term_rhs) == 0];
                 
                 %should all be the same length
-                len_consistency(i+1) = length(cons_curr);
-            end
-            
-            
+                len_consistency(i) = length(term_lhs);
+            end                        
         end
         
         function [history_con] = history_con(obj, d)
@@ -129,15 +133,18 @@ classdef delay_location_base_split < location_interface
             X_history = obj.supp.get_X_history_supp();
             history_con = [];
             
-            %fixed supplied histories
+            %fixed supplied histories (single given trajectory)
+            %either a function handle or a constant point
             if ~isa(X_history, 'supcon')
-                history_con = obj.component.history_traj_con(d, X_history);                
+                history_con = obj.history.history_traj_con(d, X_history);                
             end
 
             %free-time multiple histories
             if obj.supp.FREE_TERM && isa(X_history, 'supcon')
-                history_con  = obj.component.history_free_con(d, X_history);               
+                history_con  = obj.history.history_free_con(d, X_history);               
             end
+            
+            %TODO: add shaping here
             
             
         end
@@ -163,28 +170,8 @@ classdef delay_location_base_split < location_interface
             %data consistency
             [consistency, len_consistency] = obj.consistency_con(d);
             
-            %TODO: form a constraint with the slack measures
-            %pin down the mass of the slack measure?
-            %slack mass can go to infinity, while the mass of history
-            %measures are also unbounded
-            %should the t-marginals of joint + slack equal the lebesgue
-            %distribution over t?
-            
-            %do the direct approach
-            %the mass of the history should be the time spanned by that
-            %history. The history should be lebesgue-distributed in time
-            %(this should already be specified in fixed time)
-            [history] = obj.history_con(d);
-%             if obj.supp.FREE_TERM
-%                 cons_history_mass = [];
-%                 for i = 1:length(obj.supp.lags)
-% %                     con_slack_curr = (obj.mass_occ() + obj.time_slack.meas{i}.mass() - obj.supp.Tmax);
-%                     con_history_curr = obj.component.meas{i}.mass() - diff(obj.component.lag_span(:, i));
-%                     cons_history_mass = [cons_history_mass; con_history_curr];
-%                 end
-%             else
-%                 cons_history_mass = [];
-%             end
+
+            [cons_history] = obj.history_con(d);
             
             %package up the output
             len_dual = struct;
@@ -195,13 +182,20 @@ classdef delay_location_base_split < location_interface
             
             %ensure this is the correct sign
 %             cons_eq = [-liou; abscont_box; consistency]==0;                        
-            cons_eq = [-liou; abscont_box; -consistency]==0;                        
+            cons_eq = [-[liou; abscont_box]==0; consistency];                        
             
             %history constraints perform moment substitution 
             %this is permissible, because we know exactly what moments are
             %being substituted.
-            cons_eq = [cons_eq; history];
+            cons_eq = [cons_eq; cons_history];
         end     
+        
+        function [abscont_box, len_abscont] = abscont_box_con(obj, d)
+            %absolute continuity constraints for the box
+            %not used here
+            abscont_box = [];
+            len_abscont = 0;
+        end
         
         function [len_out] = len_eq_cons(obj)
             %LEN_EQ_CONS Number of equality constraints strictly in this

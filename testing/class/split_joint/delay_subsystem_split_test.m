@@ -49,11 +49,13 @@ d = 2*order;
 
 %% split occupation measure
 
-occ = meas_joint_split(lsupp);
+sys = delay_system_base_split(lsupp, f);
+lie = sys.cons_liou(d)
+% occ = meas_joint_split(lsupp);
 
 %% subsystem
 % 
-% sys = delay_system_base(lsupp, f);
+% sys_std = delay_system_base(lsupp, f);
 % 
 % 
 % lie = sys.cons_liou(d)

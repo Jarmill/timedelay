@@ -95,7 +95,7 @@ classdef meas_joint_split < meas_collection
                 curr_var = varnames{i};
                 vars_out = [vars_out; reshape(obj.vars.(curr_var), [], 1)];
             end
-        end
+        end       
         
         function mom_out = mom_monom_marg(obj, ind_lag, dmin, dmax)
             %MOM_MONOM_MARG get moments of the marginals of the joint 
@@ -117,6 +117,23 @@ classdef meas_joint_split < meas_collection
             
             mom_out = mom(mmon([t_curr; x_curr], dmin, dmax));
         end
+        
+        function mom_out = mom_lie(obj, d, vars_old, f_old)
+            mom_out = 0;
+            v = mmon([obj.vars.t; obj.vars.x], d);
+            Lv = diff(v, obj.vars.x)*f_old;
+            if (isfield(obj.vars, 't') && ~isempty(obj.vars.t))
+                Lv = Lv + diff(v, obj.vars.t);
+            end
+            
+            for i = 1:length(obj.meas)
+                Lv_curr = obj.meas{i}.var_sub(vars_old, Lv);
+                
+                mom_out = mom_out + mom(Lv_curr);
+            end
+        end
+        
+        
         
     end
 end

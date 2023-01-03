@@ -108,17 +108,66 @@ classdef meas_joint_split < meas_collection
                 dmin = 0;
             end                        
             
+            %perform the substitution
             t_curr = obj.vars.t;
             if ind_lag == 0                
                 x_curr = obj.vars.x;
             else
                 x_curr = obj.vars.x_lag(:, ind_lag);
             end
+            v = mmon([t_curr; x_curr], dmin, dmax);
+            vars_curr = obj.get_vars();
             
-            mom_out = mom(mmon([t_curr; x_curr], dmin, dmax));
+            %sum over the measures
+            mom_out = 0;
+            for i = 1:length(obj.meas)
+                v_curr = obj.meas{i}.var_sub(vars_curr, v);
+                
+                mom_out = mom_out + mom(v_curr);
+            end
         end
         
+        function mom_out = mom_monom_shift(obj, ind_lag, dmin, dmax)
+            %MOM_MONOM_SHIFT moments of monomials where the time is shifted
+            %from 't' to 't-time_shift'
+            
+            if nargin < 5
+                dmax = dmin;
+                dmin = 0;
+            end
+            
+            if ind_lag == 0
+                %no delay shifting occurs
+                mom_out = obj.mom_monom_marg(0, dmin, dmax);
+            else
+                %there is a nontrivial delay shift
+                
+                var_shift = [obj.vars.t-obj.lags(ind_lag); obj.vars.x];
+                nvar = length(var_shift);
+                
+                %monomial generation copied over from @mpol/mmon
+                vpow = [];
+                for k = dmin:dmax
+                    vpow = [vpow;genpow(nvar,k)];
+                end
+                %powers of the shifted times
+                monom_shift = prod(var_shift'.^vpow, 2);              
+
+                %return the output
+                mom_out = 0;
+                for i = 1:(length(obj.lags) - ind_lag+1)
+                    v_curr = obj.meas{i}.var_sub(obj.get_vars(), monom_shift);
+                
+                    mom_out = mom_out + mom(v_curr);
+                end
+            end
+        end
+        
+        
+        %% generator expressions
+        
         function mom_out = mom_lie(obj, d, vars_old, f_old)
+            %Lie derivative v -> v_t + f' * grad_x v
             mom_out = 0;
             v = mmon([obj.vars.t; obj.vars.x], d);
             Lv = diff(v, obj.vars.x)*f_old;
@@ -130,6 +179,24 @@ classdef meas_joint_split < meas_collection
                 Lv_curr = obj.meas{i}.var_sub(vars_old, Lv);
                 
                 mom_out = mom_out + mom(Lv_curr);
+            end
+        end
+        
+        function mom_out = mom_hess(obj, d, vars_old, g_old)
+            %hessian v -> g'*hess_x*g
+            mom_out = 0;
+            v = mmon([obj.vars.t; obj.vars.x], d);
+%             v_hess = v;
+            for k = 1:length(v)
+                v_partial = diff(v(k), obj.vars.x);
+                hess_curr = diff(v_partial', obj.vars.x);
+                v_hess(k) = g_old'* hess_curr *g_old;
+            end
+            
+            for i = 1:length(obj.meas)
+                hess_curr = obj.meas{i}.var_sub(vars_old, v_hess);
+                
+                mom_out = mom_out + mom(hess_curr);
             end
         end
         

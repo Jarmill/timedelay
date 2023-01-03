@@ -50,7 +50,12 @@ d = 2*order;
 %% split occupation measure
 
 sys = delay_system_base_split(lsupp, f);
-lie = sys.cons_liou(d)
+lie = sys.cons_liou(d);
+
+c0 = sys.meas_occ.mom_monom_marg(0, 2);
+c1 = sys.meas_occ.mom_monom_marg(1, 2);
+c1_shift = sys.meas_occ.mom_monom_shift(1, 2);
+c2_shift = sys.meas_occ.mom_monom_shift(2, 2);
 % occ = meas_joint_split(lsupp);
 
 %% subsystem

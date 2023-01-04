@@ -17,11 +17,13 @@ R0 = 0.4;
 % order = 3; %-1.1937 
 % order = 4;  %-1.1751
 
-%SPLIT-JOINT values
+%SPLIT-JOINT values (always better than joint+component at the cost of more
+%higher computational complexity)
 % order = 1; %-1.2500 
 % order = 2; %-1.2183
 % order = 3; %-1.1913
-order = 4;  
+order = 4;  %-1.1727
+% order = 5; -1.1630 
 % d = order*2;
 
 %% system variables

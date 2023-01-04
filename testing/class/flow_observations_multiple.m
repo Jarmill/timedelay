@@ -1,9 +1,10 @@
-SAMPLE = 0;
+SAMPLE = 1;
 PLOT = 1;
 
 rng(43, 'twister')
 
-T = 20;
+% T = 20;
+T = 5;
 % tau = 0.5;
 tau = 0.75;
 
@@ -80,15 +81,17 @@ circ = R0 * [cos(theta); sin(theta)] + C0;
 
 plot(circ(1, :), circ(2, :), 'k', 'LineWidth', 2)
 % plot(t_dde, x_dde)
+ 
+sol.obj_rec = 1.162953787;
 
 xlim([-1, 2.5])
 ylim([-1.25, 1.5])
-% plot(xlim, -sol.obj_rec*[1,1], ':r', 'LineWidth', 2)
+plot(xlim, -sol.obj_rec*[1,1], ':r', 'LineWidth', 2)
 pbaspect([diff(xlim), diff(ylim), 1])
 
-xlabel('x_1')
-ylabel('x_2')
-% title(['Order 4 bound: ', num2str(-sol.obj_rec)], 'FontSize', 16)
+xlabel('$x_1$', 'interpreter', 'latex')
+ylabel('$x_2$', 'interpreter', 'latex')
+title(['Order 5 bound: ', num2str(-sol.obj_rec)], 'FontSize', 16)
 
 end
 

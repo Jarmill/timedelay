@@ -1,7 +1,8 @@
 
 %dual formulation for peak estimation of dde
 %the Twist system with time delay
-
+%
+%CSP: Apply Correlative Sparsity to the Lie Derivative constraint
 %% setup
 
 %variables

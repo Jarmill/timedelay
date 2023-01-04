@@ -32,6 +32,6 @@ function dydt = ddex(t,y,Z)
 %   Copyright 1984-2014 The MathWorks, Inc.
 
 ylag = Z(:,1);
-% dydt = 0.5*y(1) - ylag(1);
-dydt = -ylag(1);
+dydt = 0.5*y(1) - ylag(1);
+% dydt = -ylag(1);
 end

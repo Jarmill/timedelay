@@ -1,4 +1,4 @@
-SAMPLE = 1;
+SAMPLE = 0;
 PLOT = 1;
 
 rng(43, 'twister')
@@ -62,7 +62,7 @@ end
 if PLOT
     
     if ~SAMPLE
-        load('flow_multi_sample.mat')
+        load('time_var_multi_sample.mat')
         Nsample= length(out_dde);
     end
         
@@ -88,13 +88,13 @@ plot(circ(1, :), circ(2, :), 'k', 'LineWidth', 2)
 % sol.obj_rec = 1.162953787;
 plot(sol.obj_rec*[1,1], ylim, ':r', 'LineWidth', 2)
 
-xlim([-1.2, 1])
+xlim([-1.1, 0.8])
 % ylim([-1.25, 1.5])
 pbaspect([diff(xlim), diff(ylim), 1])
 
 xlabel('$x_1$', 'interpreter', 'latex')
 ylabel('$x_2$', 'interpreter', 'latex')
-title(['Order 4 bound: ', num2str(sol.obj_rec)], 'FontSize', 16)
+title(['Order 5 bound: ', num2str(sol.obj_rec)], 'FontSize', 16)
 
 end
 

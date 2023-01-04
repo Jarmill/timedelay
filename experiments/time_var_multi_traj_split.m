@@ -44,7 +44,7 @@ p = x(1);
 % order=2; %[1.25000000472619]
 % order=3; %[1.19781822680836]
 % order=4; %[0.854326158386573]
-order=5;
+order=5; %[0.718264618058180]
 %SPLIT-JOINT values (always better than joint+component at the cost of more
 %higher computational complexity)
 % p = x(2);

@@ -88,7 +88,7 @@ classdef meas_history < meas_collection
             end
                    
             mom_out = 0;
-            if ind_lag > 1
+            if ind_lag >= 1
                 %identify the current lag
                 Nlag = length(obj.lags);
                 ind_lag = min(ind_lag, Nlag);

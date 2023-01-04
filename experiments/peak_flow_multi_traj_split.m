@@ -11,11 +11,17 @@ tau = 0.75;       % lag
 C0 = [1.5; 0];
 R0 = 0.4;
 
-
-order = 1; %-1.2500 
+%JOINT+COMPONENT VALUES 
+% order = 1; %-1.2500 
 % order = 2; %-1.2230
 % order = 3; %-1.1937 
 % order = 4;  %-1.1751
+
+%SPLIT-JOINT values
+% order = 1; %-1.2500 
+% order = 2; %-1.2183
+% order = 3; %-1.1913
+order = 4;  
 % d = order*2;
 
 %% system variables
@@ -42,7 +48,7 @@ lsupp.X_init = sum((x-C0).^2) <= R0^2;
 % p = -x;
 p = -x(2);
 
-PM = peak_delay_manager_base(lsupp, f, p);
+PM = peak_delay_manager_base_split(lsupp, f, p);
 
 sol = PM.run(order);
 % [objective, mom_con, supp_con, len_dual] = WM.cons(d, Tmax)

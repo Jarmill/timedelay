@@ -96,6 +96,47 @@ xlabel('$x_1$', 'interpreter', 'latex')
 ylabel('$x_2$', 'interpreter', 'latex')
 title(['Order 5 bound: ', num2str(sol.obj_rec)], 'FontSize', 16)
 
+
+%% 3d plot
+figure(51)
+clf
+hold on
+% plot(x_ode(:, 1), x_ode(:, 2))
+for i = 1:Nsample
+    plot3(out_dde{i}.thist, out_dde{i}.xhist(:, 1), out_dde{i}.xhist(:, 2),  'color', 0.7*[1,1,1]);    
+end
+
+for i =1:Nsample
+    plot3(out_dde{i}.t, out_dde{i}.x(:, 1), out_dde{i}.x(:, 2), 'c');
+end
+
+bnd = [0.718264618058180];
+ylim([-1.1, 0.8])
+zlim([   -0.5000    1.0000])
+
+xl = xlim;
+zl = ylim;
+patch(xl([1,1,2,2,1]), bnd*ones(1,5), zl([1,2,2,1,1]), 'r', 'EdgeColor', 'None', 'FaceAlpha', 0.5)
+
+
+
+% theta = linspace(0, 2*pi, 100);
+% circ = R0 * [cos(theta); sin(theta)] + C0;
+
+% plot(circ(1, :), circ(2, :), 'k', 'LineWidth', 2)
+% plot(t_dde, x_dde)
+ 
+% sol.obj_rec = 1.162953787;
+% plot(sol.obj_rec*[1,1], ylim, ':r', 'LineWidth', 2)
+
+% ylim([-1.25, 1.5])
+pbaspect([diff(xlim), diff(ylim), 1])
+
+xlabel('$x_1$', 'interpreter', 'latex')
+ylabel('$x_2$', 'interpreter', 'latex')
+title(['Order 5 bound: ', num2str(sol.obj_rec)], 'FontSize', 16)
+
+
 end
 
 %% Function

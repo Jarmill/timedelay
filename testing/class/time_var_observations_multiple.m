@@ -85,12 +85,13 @@ circ = R0 * [cos(theta); sin(theta)] + C0;
 plot(circ(1, :), circ(2, :), 'k', 'LineWidth', 2)
 % plot(t_dde, x_dde)
  
-% sol.obj_rec = 1.162953787;
+sol.obj_rec = 0.71826461805818;
 plot(sol.obj_rec*[1,1], ylim, ':r', 'LineWidth', 2)
 
 xlim([-1.1, 0.8])
 % ylim([-1.25, 1.5])
 pbaspect([diff(xlim), diff(ylim), 1])
+
 
 xlabel('$x_1$', 'interpreter', 'latex')
 ylabel('$x_2$', 'interpreter', 'latex')
@@ -130,10 +131,10 @@ patch(xl([1,1,2,2,1]), bnd*ones(1,5), zl([1,2,2,1,1]), 'r', 'EdgeColor', 'None',
 % plot(sol.obj_rec*[1,1], ylim, ':r', 'LineWidth', 2)
 
 % ylim([-1.25, 1.5])
-pbaspect([diff(xlim), diff(ylim), 1])
-
-xlabel('$x_1$', 'interpreter', 'latex')
-ylabel('$x_2$', 'interpreter', 'latex')
+pbaspect([diff(xlim), diff(ylim), diff(zlim)])
+xlabel('$t$', 'interpreter', 'latex')
+ylabel('$x_1$', 'interpreter', 'latex')
+zlabel('$x_2$', 'interpreter', 'latex')
 title(['Order 5 bound: ', num2str(sol.obj_rec)], 'FontSize', 16)
 
 

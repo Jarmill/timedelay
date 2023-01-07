@@ -136,12 +136,19 @@ classdef delay_location_base_split < location_interface
             %fixed supplied histories (single given trajectory)
             %either a function handle or a constant point
             if ~isa(X_history, 'supcon')
-                history_con = obj.history.history_traj_con(d, X_history);                
+                history_con = obj.history.history_traj_con(d, X_history);                  
             end
 
             %free-time multiple histories
             if obj.supp.FREE_TERM && isa(X_history, 'supcon')
                 history_con  = obj.history.history_free_con(d, X_history);               
+            end
+            
+            if obj.supp.CONSTANT_HIST
+                %shaping constraint to ensure that the histories in
+                %X_history are constant in time
+                shape_con = obj.shape_constant_con(d);                    
+                history_con = [history_con; shape_con];
             end
             
             %TODO: add shaping here
@@ -195,6 +202,37 @@ classdef delay_location_base_split < location_interface
             %not used here
             abscont_box = [];
             len_abscont = 0;
+        end
+        
+        function [shape_con, len_shape_con] = shape_constant_con(obj, d)
+            %shaping constraint to ensure that the histories are constant
+            %in time. Adding more complicated shaping constraints will be
+            %the subject of future work.
+            shape_con = [];
+            
+            %Lie derivative of history
+            Lhist = obj.history.shaping_mom_const(d);
+            
+            %monomials for initial measure
+            monom = mmon([obj.vars.t; obj.vars.x], d);
+            
+            monom_tau = subs(monom, obj.vars.t, -max(obj.supp.lags));
+            monom_0 = subs(monom, obj.vars.t, 0);
+            
+            vars_reduced = struct('t', obj.vars.t, 'x', obj.vars.x);
+%             for i = 1:length(obj.init.meas)
+             mom_tau = obj.init.var_sub_mom(vars_reduced, monom_tau);
+             mom_0 = obj.init.var_sub_mom(vars_reduced, monom_0);
+%             end
+
+            
+            
+            shape_con = (mom_tau + Lhist - mom_0 == 0);
+
+%             obj.init.
+            len_shape_con = length(shape_con);
+            
+            
         end
         
         function [len_out] = len_eq_cons(obj)

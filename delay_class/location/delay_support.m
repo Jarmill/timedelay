@@ -14,6 +14,8 @@ classdef delay_support < loc_support
                     %               as  X_history(t,x)
                     %TODO: allow for multiple histories (?)
         
+        CONSTANT_HIST=0; %shaping constraint to ensure that the histories 
+                         %inside X_history are constant in time
         %vars will include 'x_lag' and possibly 'w_lag'
         
     end

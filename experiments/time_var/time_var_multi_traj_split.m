@@ -44,15 +44,9 @@ p = x(1);
 % order=2; %[1.25000000472619]
 % order=3; %[1.19781822680836]
 % order=4; %[0.854326158386573]
-order=5; %[0.718264618058180]
-%SPLIT-JOINT values (always better than joint+component at the cost of more
-%higher computational complexity)
-% p = x(2);
-% order = 1; %[1.25000000006989]
-% order = 2; %[1.25000000539242]
-% order = 3; %[0.955703173611465]
-% order = 4;  %[0.913761594166000]
-% order = 5; %[0.911187720953657]
+% order=5; %[0.718264618058180]
+
+% order = 5; %
 
 PM = peak_delay_manager_base_split(lsupp, f, p);
 

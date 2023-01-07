@@ -1,4 +1,4 @@
-SAMPLE = 1;
+SAMPLE = 0;
 PLOT = 1;
 
 rng(43, 'twister')
@@ -68,17 +68,21 @@ if PLOT
         Nsample= length(out_dde);
     end
         
+traj_cell = {out_dde, out_dde_pinhole, out_dde_const, out_dde_constjump};
+traj_names = {'Free', 'Pinhole', 'Constant', 'Constant-Center Jump'};
+
 figure(50)
 clf
 hold on
+tccurr = out_dde_const;
 % plot(x_ode(:, 1), x_ode(:, 2))
 i = 20;
 for i = 1:Nsample
-    plot(out_dde{i}.xhist(:, 1), out_dde{i}.xhist(:, 2), 'color', 0.7*[1,1,1]);    
+    plot(tccurr{i}.xhist(:, 1), tccurr{i}.xhist(:, 2), 'color', 0.7*[1,1,1]);    
 end
 
 for i =1:Nsample
-    plot(out_dde{i}.x(:, 1), out_dde{i}.x(:, 2), 'c');
+    plot(tccurr{i}.x(:, 1), tccurr{i}.x(:, 2), 'c');
 end
 
 theta = linspace(0, 2*pi, 100);
@@ -87,7 +91,7 @@ circ = R0 * [cos(theta); sin(theta)] + C0;
 plot(circ(1, :), circ(2, :), 'k', 'LineWidth', 2)
 % plot(t_dde, x_dde)
  
-sol.obj_rec = 0.71826461805818;
+% sol.obj_rec = 0.71826461805818;
 plot(sol.obj_rec*[1,1], ylim, ':r', 'LineWidth', 2)
 
 xlim([-1.1, 0.8])
@@ -104,9 +108,6 @@ ylabel('$x_2$', 'interpreter', 'latex')
 figure(51)
 tiledlayout(2, 2, 'TileSpacing','Compact','Padding','Compact')
 
-
-traj_cell = {out_dde, out_dde_pinhole, out_dde_const, out_dde_constjump};
-traj_names = {'Free', 'Pinhole', 'Constant', 'Constant-Center Jump'};
 tile_cell = cell(4, 1);
 yl = [];
 zl = [];

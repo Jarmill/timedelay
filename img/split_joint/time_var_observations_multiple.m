@@ -42,7 +42,7 @@ dde_options = ddeset('AbsTol', 1e-9, 'RelTol', 1e-7, 'Jumps', [0], ...
 
 %% Sample Trajectories
 if SAMPLE
-Nsample = 50;
+Nsample = 150;
 out_dde = cell(Nsample, 1);
 out_dde_const = cell(Nsample, 1);
 out_dde_constjump = cell(Nsample, 1);
@@ -140,6 +140,49 @@ for k = 1:4
 %     title(['Order 5 bound: ', num2str(sol.obj_rec)], 'FontSize', 16)
 
 end
+
+%% show the plot
+
+figure(52)
+clf
+% tiledlayout(2, 2, 'TileSpacing','Compact','Padding','Compact')
+
+% tile_cell = cell(4, 1);
+yl = [];
+zl = [];
+k=1;
+%     tile_cell{k} = nexttile;
+    hold on
+    tc = traj_cell{k};
+    for i = 1:Nsample
+        plot3(tc{i}.thist_sample, tc{i}.xhist_sample(:, 1), tc{i}.xhist_sample(:, 2),  'color', 0.7*[1,1,1]);    
+    end
+
+    for i =1:Nsample
+        plot3(tc{i}.t, tc{i}.x(:, 1), tc{i}.x(:, 2), 'c');
+    end
+    xlim([-tau, T])
+    plot3(-tau*ones(length(circ), 1), circ(1, :), circ(2, :), 'k', 'LineWidth', 2)
+    plot3(0*ones(length(circ), 1), circ(1, :), circ(2, :), 'k', 'LineWidth', 2)
+    if k==1
+        yl = ylim;
+        zl = zlim;
+    end
+        ylim(yl);
+        zlim(zl);
+    xl =xlim;
+    view(-5, 77)
+    xlabel('$t$', 'interpreter', 'latex')
+    ylabel('$x_1$', 'interpreter', 'latex')
+    zlabel('$x_2$', 'interpreter', 'latex')
+    tile_cell{k}.YAxis.Visible='off';
+    tile_cell{k}.ZAxis.Visible='off';
+    title(traj_names{k});
+
+    bnd=0.71826;
+    title(['Order 5 bound: ', num2str(bnd)], 'FontSize', 16)
+    patch(xl([1,1,2,2,1]), bnd*ones(1,5), zl([1,2,2,1,1]), 'r', 'EdgeColor', 'None', 'FaceAlpha', 0.5)
+
 
 % linkaxes([tile_cell{1}, tile_cell{2}, tile_cell{3}, tile_cell{4}], 'xyz')
 

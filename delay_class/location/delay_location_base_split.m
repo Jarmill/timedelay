@@ -220,16 +220,12 @@ classdef delay_location_base_split < location_interface
             monom_0 = subs(monom, obj.vars.t, 0);
             
             vars_reduced = struct('t', obj.vars.t, 'x', obj.vars.x);
-%             for i = 1:length(obj.init.meas)
-             mom_tau = obj.init.var_sub_mom(vars_reduced, monom_tau);
-             mom_0 = obj.init.var_sub_mom(vars_reduced, monom_0);
-%             end
+            mom_tau = obj.init.var_sub_mom(vars_reduced, monom_tau);
+            mom_0 = obj.init.var_sub_mom(vars_reduced, monom_0);
 
-            
             
             shape_con = (mom_tau + Lhist - mom_0 == 0);
 
-%             obj.init.
             len_shape_con = length(shape_con);
             
             

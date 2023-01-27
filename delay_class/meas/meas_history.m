@@ -132,16 +132,18 @@ classdef meas_history < meas_collection
                     span_curr = obj.lag_span(:, length(obj.lags)-i+1);
                     if isa(X_history, 'function_handle')
                         %numerically integrate trajectories
-                        t_sample = linspace(span_curr(1), span_curr(2), obj.Npts_history);
-                        x_sample = X_history(t_sample);
-                                                
+                        mom_history = obj.hist_integrate(d, span_curr, X_history);
                         
-                        dv = genPowGlopti(length(obj.vars.x)+1, d);
-                        mom_history = monom_int(t_sample, x_sample, dv);                        
+%                         t_sample = linspace(span_curr(1), span_curr(2), obj.Npts_history);
+%                         x_sample = X_history(t_sample);
+%                                                 
+%                         
+%                         dv = genPowGlopti(length(obj.vars.x)+1, d);
+%                         mom_history = monom_int(t_sample, x_sample, dv);                        
                     else
                         %X_history is a double
                         %constant history trajectory
-                        mom_history= ConstMom(d, span_curr, X_history);
+                        mom_history= obj.hist_time_mom(d, span_curr, X_history);
                     end
                     
                     %time marginals of history component measure
@@ -188,8 +190,8 @@ classdef meas_history < meas_collection
                 for i = 1:length(obj.lags)
                     span_curr = obj.lag_span(:, length(obj.lags)-i+1);
                     %moments of lebesgue distribution on time support
-                    t_mom = ConstMom(d, span_curr, []);
-
+%                     t_mom = ConstMom(d, span_curr, []);
+                    t_mom = obj.hist_time_mom(d, span_curr, []);
                     %time marginals of history component measure
                     moms = mom(obj.meas{i}.vars.t.^genPowGlopti(1, d));
 
@@ -198,8 +200,23 @@ classdef meas_history < meas_collection
             end
             
         end
-    
         
+        function t_mom = hist_time_mom(obj, d, span_curr, x0)
+            %HIST_TIME_MOM find the moments of the time distribution
+            t_mom = ConstMom(d, span_curr, x0);
+        end
+        
+    
+        function mom_history = hist_integrate(obj, d, span_curr, X_history)
+            %HIST_INTEGRATE find the moments of supplied (single) initial
+            %history
+            t_sample = linspace(span_curr(1), span_curr(2), obj.Npts_history);
+            x_sample = X_history(t_sample);
+
+
+            dv = genPowGlopti(length(obj.vars.x)+1, d);
+            mom_history = monom_int(t_sample, x_sample, dv);  
+        end
         
     end
 end

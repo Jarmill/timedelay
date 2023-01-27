@@ -13,7 +13,8 @@ classdef delay_support < loc_support
                     %   function:   A handle evaluating the single history 
                     %               as  X_history(t,x)
                     %TODO: allow for multiple histories (?)
-        
+        dt = 0;
+        DISCRETE_TIME=0;
         CONSTANT_HIST=0; %shaping constraint to ensure that the histories 
                          %inside X_history are constant in time
         %vars will include 'x_lag' and possibly 'w_lag'

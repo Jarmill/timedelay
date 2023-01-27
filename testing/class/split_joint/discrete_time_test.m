@@ -54,11 +54,19 @@ d = 2*order;
 
 % moments = TrainMom(d, [-2, -1], 0.1, []);
 
+%% scaling in time
+
+Tmax = lsupp.Tmax;
+lsupp.Tmax = lsupp.Tmax/Tmax;
+lsupp.lags = lsupp.lags/Tmax;
+lsupp.dt = 1/Tmax;
+H = meas_history_discrete(lsupp);
+
 
 %% split occupation measure
 
-% sys = delay_system_base_split(lsupp, f);
-% lie = sys.cons_liou(d);
+sys = delay_system_base_discrete_split(lsupp, f);
+lie = sys.cons_liou(d);
 % 
 % c0 = sys.meas_occ.mom_monom_marg(0, 2);
 % c1 = sys.meas_occ.mom_monom_marg(1, 2);
@@ -70,11 +78,6 @@ d = 2*order;
 
 %scaling 
 
-Tmax = lsupp.Tmax;
-lsupp.Tmax = lsupp.Tmax/Tmax;
-lsupp.lags = lsupp.lags/Tmax;
-lsupp.dt = 1/Tmax;
-H = meas_history_discrete(lsupp);
 
 mh0 = H.mom_shift(0, 2);
 mh1 = H.mom_shift(1, 2);

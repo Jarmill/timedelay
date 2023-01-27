@@ -193,6 +193,26 @@ classdef meas_joint_split < meas_collection
             end
         end
         
+        function mom_out = mom_push(obj, d, vars_old, f_old, tshift)
+            
+            if nargin < 5
+                tshift = 0;
+            end
+            mom_out = 0;
+            v = mmon([obj.vars.t; obj.vars.x], d);
+%             v_hess = v;
+            push = subs(v, [obj.vars.t; obj.vars.x], [obj.vars.t+tshift; f_old]);
+%             for k = 1:length(v)
+%                 push
+%             end
+            
+            for i = 1:length(obj.meas)
+%                 hess_curr = obj.meas{i}.var_sub(vars_old, v_hess);
+                
+                mom_out = mom_out + mom(push);
+            end
+        end
+        
         
         
     end

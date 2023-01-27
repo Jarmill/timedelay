@@ -1,5 +1,5 @@
 classdef delay_system_base_split < delay_system_interface
-    %DELAY_SYSTEM_SPLIT A subsystem for time-delay system containing the
+    %DELAY_SYSTEM_BASE_SPLIT A subsystem for time-delay system containing the
     %split-joint occupation measure in the absence of uncertainty or input
     
     properties

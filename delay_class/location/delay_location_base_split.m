@@ -30,22 +30,34 @@ classdef delay_location_base_split < location_interface
                 obj.supp.lags = obj.supp.lags/Tmax;    
                 delay_supp.lags = obj.supp.lags;
                 delay_supp.Tmax = 1;
+                if obj.supp.DISCRETE_TIME
+                    delay_supp.dt = 1/Tmax;
+                end
             end
             
             Nsys = length(obj.f);
             obj.sys = cell(Nsys, 1);
             %subsystems
+            
+            %history measure
+            if obj.supp.DISCRETE_TIME
+                obj.history = meas_history(delay_supp);
+            else
+                obj.history = meas_history_discrete(delay_supp);
+            end
+            
+            
             for i = 1:Nsys                
                 %TODO: implement digital system
-%                 if obj.supp.DIGITAL
-%                     obj.sys{i} = delay_system_digital(obj.supp, obj.f{i});
-%                 else
+                if obj.supp.DISCRETE_TIME
+                    obj.sys{i} = delay_system_base_discrete_split(obj.supp, obj.f{i});
+                else
                     obj.sys{i} = delay_system_base_split(delay_supp, obj.f{i});
-%                 end
+                end
             end  
 
-            %history measure
-            obj.history = meas_history(delay_supp);
+            
+%             obj.history = meas_history(delay_supp);
 
             %slack measure for free terminal time
             if obj.supp.FREE_TERM

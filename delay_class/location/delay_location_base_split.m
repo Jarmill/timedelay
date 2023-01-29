@@ -50,7 +50,7 @@ classdef delay_location_base_split < location_interface
             for i = 1:Nsys                
                 %TODO: implement digital system
                 if obj.supp.DISCRETE_TIME
-                    obj.sys{i} = delay_system_base_discrete_split(obj.supp, obj.f{i});
+                    obj.sys{i} = delay_system_base_discrete_split(delay_supp, obj.f{i});
                 else
                     obj.sys{i} = delay_system_base_split(delay_supp, obj.f{i});
                 end

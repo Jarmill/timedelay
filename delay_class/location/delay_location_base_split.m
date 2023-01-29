@@ -28,7 +28,7 @@ classdef delay_location_base_split < location_interface
             %scale down the lags
             if obj.supp.SCALE_TIME
                 obj.supp.lags = obj.supp.lags/Tmax;    
-                delay_supp.lags = obj.supp.lags;
+                delay_supp.lags = delay_supp.lags/Tmax;
                 delay_supp.Tmax = 1;
                 if obj.supp.DISCRETE_TIME
                     delay_supp.dt = 1/Tmax;
@@ -41,9 +41,9 @@ classdef delay_location_base_split < location_interface
             
             %history measure
             if obj.supp.DISCRETE_TIME
-                obj.history = meas_history(delay_supp);
-            else
                 obj.history = meas_history_discrete(delay_supp);
+            else
+                obj.history = meas_history(delay_supp);
             end
             
             

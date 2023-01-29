@@ -22,7 +22,7 @@ classdef delay_system_base_discrete_split < delay_system_base_split
             %
             
             %use the internals of meas_occ.mom_push            
-            y_push = obj.meas_occ.mom_push(d, [obj.vars.t; obj.vars.x], obj.f, obj.dt);
+            y_push = obj.meas_occ.mom_push(d, obj.vars.x, obj.f, obj.dt);
             y_orig = obj.meas_occ.mom_monom_marg(0, d);
             
             Ay = y_push - y_orig;

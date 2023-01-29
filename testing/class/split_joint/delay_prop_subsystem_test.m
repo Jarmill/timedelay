@@ -36,11 +36,13 @@ lsupp.X_init = X_init;
 objective = x(2);
 
 %% relaxation information
-order = 1;
+order = 2;
 d = 2*order;
 
 %% split occupation measure
 
 loc = delay_location_prop_split(lsupp,f, objective);
 
-[cons, len_consistency] = loc.consistency_con(d);
+% [cons, len_consistency] = loc.consistency_con(d);
+
+[objective, cons_eq, cons_ineq, len_dual]  = loc.all_cons(d);

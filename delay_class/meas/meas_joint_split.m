@@ -156,44 +156,6 @@ classdef meas_joint_split < meas_collection
             end
         end
         
-        function mom_out = mom_monom_scale(obj, ind_lag, dmin, dmax)
-            %MOM_MONOM_SCALE moments of monomials where the time is scaled
-            %from 't' to 't*scale' where scale<1
-            
-            if nargin < 5
-                dmax = dmin;
-                dmin = 0;
-            end
-            
-            if ind_lag == 0
-                %no delay shifting occurs
-                mom_out = obj.mom_monom_marg(0, dmin, dmax);
-            else
-                %there is a nontrivial delay shift
-                
-                %TODO: check this. is it t+tau) or (t-tau)?
-                var_shift = [obj.vars.t*obj.lags(ind_lag); obj.vars.x];
-                nvar = length(var_shift);
-                
-                %monomial generation copied over from @mpol/mmon
-                vpow = [];
-                for k = dmin:dmax
-                    vpow = [vpow;genpow(nvar,k)];
-                end
-                %powers of the shifted times
-                monom_shift = prod(var_shift'.^vpow, 2);              
-
-                %return the output
-                mom_out = 0;
-                for i = 1:(length(obj.lags) - ind_lag+1)
-                    v_curr = obj.meas{i}.var_sub(obj.get_vars(), monom_shift);
-                
-                    mom_out = mom_out + mom(v_curr);
-                end
-            end
-        end
-        
-        
         %% generator expressions
         
         function mom_out = mom_lie(obj, d, vars_old, f_old)

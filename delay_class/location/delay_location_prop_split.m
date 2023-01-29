@@ -1,23 +1,23 @@
-classdef delay_location_base_split < location_interface
-    %DELAY_LOCATION A location (space) of a dynamical system
+classdef delay_location_prop_split < location_interface
+    %DELAY_LOCATION_PROP_SPLIT  A location (space) of a dynamical system
     %   includes descriptions of the space as well as measures
     %   used for continuous or discrete time-delay systems
-    
-    %right now this is a 'base' version without external inputs
-    
+    %
+    % proportional delay: x'(t) = f(t, x(t), x(s t)) for s in [0, 1].
+    %
+    %
+    % there is no history measure involved here. Negative time is never
+    % needed in the proportional delay model
     properties
         varnames = {'t', 'x', 'x_lag'};
         
-        history = [];
         time_slack = [];
     end
     
     methods
-        function obj = delay_location_base_split(delay_supp,f, objective)
-            %DELAY_LOCATION Construct an instance of this class
+        function obj = delay_location_prop_split(delay_supp,f, objective)
+            %DELAY_LOCATION_PROP_SPLIT Construct an instance of this class
             %   Detailed explanation goes here
-            
-            Tmax = delay_supp.Tmax;
             
             if nargin < 3             
                 %by default, no objective
@@ -26,46 +26,24 @@ classdef delay_location_base_split < location_interface
             obj@location_interface(delay_supp, f, objective, []);
 
             %scale down the lags
-            if obj.supp.SCALE_TIME
-                obj.supp.lags = obj.supp.lags/Tmax;    
-                delay_supp.lags = delay_supp.lags/Tmax;
+            if obj.supp.SCALE_TIME                
                 delay_supp.Tmax = 1;
-                if obj.supp.DISCRETE_TIME
-                    delay_supp.dt = 1/Tmax;
-                end
             end
             
             Nsys = length(obj.f);
             obj.sys = cell(Nsys, 1);
+            
             %subsystems
-            
-            %history measure
-            if obj.supp.DISCRETE_TIME
-                obj.history = meas_history_discrete(delay_supp);
-            else
-                obj.history = meas_history(delay_supp);
-            end
-            
-            
-            for i = 1:Nsys                                
-                if obj.supp.DISCRETE_TIME
-                    obj.sys{i} = delay_system_base_discrete_split(delay_supp, obj.f{i});
-                else
-                    obj.sys{i} = delay_system_base_split(delay_supp, obj.f{i});
-                end
+            for i = 1:Nsys                
+                obj.sys{i} = delay_system_base_split(delay_supp, obj.f{i}, @meas_joint_prop_split);                
             end  
-
-            
-%             obj.history = meas_history(delay_supp);
 
             %slack measure for free terminal time
             if obj.supp.FREE_TERM
                 obj.time_slack = meas_time_slack(obj.supp);
             end
+            
         end
-
-        
-        %% getters 
         
         %% support
         function supp_con_out = supp_con(obj)
@@ -73,10 +51,7 @@ classdef delay_location_base_split < location_interface
             
             %support of initial, terminal, occupation measures
             supp_con_out = supp_con@location_interface(obj);
-            
-            %history measure
-            supp_con_out = [supp_con_out; obj.history.supp()];
-            
+
             %time slack
             if obj.supp.FREE_TERM
                 supp_con_out = [supp_con_out; obj.time_slack.supp()];
@@ -93,17 +68,12 @@ classdef delay_location_base_split < location_interface
             cons = [];
             len_consistency = zeros(Nlag, 1);
             for i = 1:Nlag
-%                 cons_curr = 0;
-%                 for j = 1:length(obj.sys)
-%                     cons_curr = 
                 %marginal of the joint occupation measure
                 term_marg =  obj.sys{1}.meas_occ.mom_monom_marg(i, d);
                 
                 %shifted marginals of the component measures
-                term_shift= obj.sys{1}.meas_occ.mom_monom_shift(i, d);
+                term_shift= obj.sys{1}.meas_occ.mom_monom_scale(i, d);
                 
-                %shifted marginals of the history measure
-                term_history = obj.history.mom_shift(i, d);
                 
                 %slack in case there is free terminal time
                 if obj.supp.FREE_TERM
@@ -113,58 +83,13 @@ classdef delay_location_base_split < location_interface
                 end
                 
                 term_lhs = (term_marg + term_slack);
-                term_rhs = (term_shift + term_history);
+                term_rhs = term_shift;
                 
                 cons = [cons;  (term_lhs - term_rhs) == 0];
                 
                 %should all be the same length
                 len_consistency(i) = length(term_lhs);
             end                        
-        end
-        
-        function [history_con] = history_con(obj, d)
-            %HISTORY_CON Pin down moments of the history component
-            %measures. 
-            %
-            %If X_history is given as a vector or a function
-            %handle, set moments of the history component measures to
-            %moments of this distribution.
-            %
-            %Else if there is a free terminal time, ensure that the
-            %t-marginal of the history component measures are distributed
-            %according to the Lebesgue distribution
-            %
-            %Else do nothing (fixed terminal time and allowable measures in
-            %a set)
-            
-            %TODO: This is some bad code. untangle the X_history type checks 
-            %it should be mom_con_traj or mom_con_free but not both.
-                       
-            %TODO: Also figure out dual recovery
-            X_history = obj.supp.get_X_history_supp();
-            history_con = [];
-            
-            %fixed supplied histories (single given trajectory)
-            %either a function handle or a constant point
-            if ~isa(X_history, 'supcon')
-                history_con = obj.history.history_traj_con(d, X_history);                  
-            end
-
-            %free-time multiple histories
-            if obj.supp.FREE_TERM && isa(X_history, 'supcon')
-                history_con  = obj.history.history_free_con(d, X_history);               
-            end
-            
-            if obj.supp.CONSTANT_HIST
-                %shaping constraint to ensure that the histories in
-                %X_history are constant in time
-                shape_con = obj.shape_constant_con(d);                    
-                history_con = [history_con; shape_con];
-            end
-            
-            %TODO: add shaping here
-            
-            
         end
         
         function [objective, cons_eq, cons_ineq, len_dual] = all_cons(obj, d)
@@ -187,10 +112,7 @@ classdef delay_location_base_split < location_interface
             
             %data consistency
             [consistency, len_consistency] = obj.consistency_con(d);
-            
 
-            [cons_history] = obj.history_con(d);
-            
             %package up the output
             len_dual = struct;
             len_dual.v = len_liou;
@@ -202,10 +124,6 @@ classdef delay_location_base_split < location_interface
 %             cons_eq = [-liou; abscont_box; consistency]==0;                        
             cons_eq = [-[liou; abscont_box]==0; consistency];                        
             
-            %history constraints perform moment substitution 
-            %this is permissible, because we know exactly what moments are
-            %being substituted.
-            cons_eq = [cons_eq; cons_history];
         end     
         
         function [abscont_box, len_abscont] = abscont_box_con(obj, d)
@@ -213,33 +131,6 @@ classdef delay_location_base_split < location_interface
             %not used here
             abscont_box = [];
             len_abscont = 0;
-        end
-        
-        function [shape_con, len_shape_con] = shape_constant_con(obj, d)
-            %shaping constraint to ensure that the histories are constant
-            %in time. Adding more complicated shaping constraints will be
-            %the subject of future work.
-            shape_con = [];
-            
-            %Lie derivative of history
-            Lhist = obj.history.shaping_mom_const(d);
-            
-            %monomials for initial measure
-            monom = mmon([obj.vars.t; obj.vars.x], d);
-            
-            monom_tau = subs(monom, obj.vars.t, -max(obj.supp.lags));
-            monom_0 = subs(monom, obj.vars.t, 0);
-            
-            vars_reduced = struct('t', obj.vars.t, 'x', obj.vars.x);
-            mom_tau = obj.init.var_sub_mom(vars_reduced, monom_tau);
-            mom_0 = obj.init.var_sub_mom(vars_reduced, monom_0);
-
-            
-            shape_con = (mom_tau + Lhist - mom_0 == 0);
-
-            len_shape_con = length(shape_con);
-            
-            
         end
         
         function [len_out] = len_eq_cons(obj)

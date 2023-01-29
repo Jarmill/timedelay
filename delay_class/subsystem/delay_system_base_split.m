@@ -8,12 +8,15 @@ classdef delay_system_base_split < delay_system_interface
     
     methods
         %% setup
-        function obj = delay_system_base_split(delay_supp, f)
+        function obj = delay_system_base_split(delay_supp, f, meas_handle)
             %DELAY_SYSTEM_BASE Construct an instance of this class
             %   Detailed explanation goes here
 
+            if nargin < 3
+                meas_handle = @meas_joint_split;
+            end
             
-            obj@delay_system_interface(delay_supp, f, [], @meas_joint_split);
+            obj@delay_system_interface(delay_supp, f, [], meas_handle);
             
             %correctly define the occupation measure
             obj.meas_occ = obj.meas_def_split(delay_supp);
@@ -26,7 +29,7 @@ classdef delay_system_base_split < delay_system_interface
         
         function MO = meas_def_split(obj, delay_supp)
             %the actual definition of the occupation measure that matters
-            MO = meas_joint_split(delay_supp);
+            MO = obj.meas_type(delay_supp);
         end
         
         %% get moments

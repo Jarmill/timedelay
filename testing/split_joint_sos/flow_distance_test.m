@@ -14,9 +14,15 @@ y = sdpvar(2, 1);
           %dist_rec = 0.3046, order 3
           
 %the safety margin fails, but the distance is successful
-% Tmax = 8; % order 3: 0.1572, order 4: 0.1820
-Tmax = 10;
+Tmax = 8; 
 
+
+%Tmax = 8 
+% order = 1; %1.1897e-04
+% order = 2; %4.0420e-04
+%order=3;% 0.1572, 
+%order=4; % 0.1820
+order=5; % 0.1820
 tau = 0.5;
 ts = tau/Tmax;
 
@@ -44,7 +50,7 @@ cfy = replace(cf, x0, y);
 
 c = sum((x0-y).^2);
 
-order = 3;
+
 d=2*order;
 
 %objective

@@ -15,7 +15,11 @@ classdef peak_delay_manager_base_split < manager_interface
             %weak solution: fixed terminal time
             loc_supp.FREE_TERM = 1;
 %             loc_supp.SCALE_TIME = 0; %change this later
-            loc_curr = delay_location_base_split(loc_supp, f, objective);
+            if loc_supp.PROPORTIONAL
+                loc_curr = delay_location_prop_split(loc_supp, f, objective);            
+            else
+                loc_curr = delay_location_base_split(loc_supp, f, objective);            
+            end
             
             obj@manager_interface(loc_curr);
         end

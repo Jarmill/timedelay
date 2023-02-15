@@ -1,6 +1,6 @@
 mset clear
 
-lags = [1; 2];
+lags = [2; 5];
 
 n = 3;
 mpol('t', 1, 1);
@@ -29,19 +29,23 @@ f = [-beta*x(1)*x(3);
      alpha*xd(2, 2) - gamma*x(3)];
  
 lsupp = delay_support(vars);
+lsupp.Tmax = Tmax;
 lsupp.lags = lags;
 lsupp.vars = vars;
 lsupp.X = X;
 lsupp.X_init = X_init;
 lsupp.X_history = X_history;
+lsupp.DISCRETE_TIME = 1;
 
 %% relaxation information
 order = 1;
 d = 2*order;
 
+objective_in = -x(2);
 %% split occupation measure
 
-loc = delay_location_base_split(lsupp, f, objective);
+% loc = delay_location_base_split(lsupp, f)
+loc = delay_location_base_split(lsupp, f, objective_in);
 
 sc = loc.supp_con();
 

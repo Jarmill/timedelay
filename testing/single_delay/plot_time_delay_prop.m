@@ -2,13 +2,13 @@ options = ddeset('AbsTol', 1e-10, 'RelTol', 1e-7);
 
 T = 1;
 xh0 = -1;
-% kappa = 0.4;
-% K0 = 1;
-% K1 = 4;
-
-kappa = 0.2;
+kappa = 0.6;
 K0 = 1;
-K1 = 2;
+K1 = 5;
+
+% kappa = 0.2;
+% K0 = 1;
+% K1 = 2;
 
 sol = ddesd(@(t, y, z) -K0*y - K1*z,@(t, y) kappa*t,@(t) xh0,[0,T], options);
 

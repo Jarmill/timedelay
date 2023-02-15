@@ -14,7 +14,8 @@ classdef delay_support < loc_support
                     %               as  X_history(t,x)
                     %TODO: allow for multiple histories (?)
         dt = 0;
-        DISCRETE_TIME=0;
+        DISCRETE_TIME=0;%discrete-time x(t+1) = f(t, x(t), x(t-tau))
+        PROPORTIONAL=0; %proportional delay x'(t) = f(t, x(t), x(s t)) 
         CONSTANT_HIST=0; %shaping constraint to ensure that the histories 
                          %inside X_history are constant in time
         %vars will include 'x_lag' and possibly 'w_lag'

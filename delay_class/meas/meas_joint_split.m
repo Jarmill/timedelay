@@ -156,7 +156,6 @@ classdef meas_joint_split < meas_collection
             end
         end
         
-        
         %% generator expressions
         
         function mom_out = mom_lie(obj, d, vars_old, f_old)
@@ -207,9 +206,9 @@ classdef meas_joint_split < meas_collection
 %             end
             
             for i = 1:length(obj.meas)
-%                 hess_curr = obj.meas{i}.var_sub(vars_old, v_hess);
+                push_curr = obj.meas{i}.var_sub(vars_old, push);
                 
-                mom_out = mom_out + mom(push);
+                mom_out = mom_out + mom(push_curr);
             end
         end
         

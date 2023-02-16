@@ -17,7 +17,8 @@ Tmax = 30; %max time of simulation
 
 
 %initial infection rate
-I0= 0.2;
+% I0= 0.2;
+I0 = 0.1;
 x0 = [1-I0; I0];    %initial condition at t=0
 % xh0 = [1; 0];       %constant history
 xh0 = x0;
@@ -49,19 +50,20 @@ end
 figure(1)
 clf
 hold on
-
-
-
-plot(Tmax * T, X(:, 2), 'DisplayName', 'Delay=0')
+% plot(Tmax * T, X(:, 2), 'k', 'LineWidth', 2)
 
 for i = 1:N_lags
-    plot(Tmax * sol_lags{i}.x, sol_lags{i}.y(2, :), 'DisplayName', ['Delay=', num2str(lag_list(i))])
+    plot(Tmax * sol_lags{i}.x, sol_lags{i}.y(2, :))
+%     plot(Tmax * sol_lags{i}.x, sol_lags{i}.y(2, :), 'DisplayName', ['Delay=', num2str(lag_list(i))])
 end
-title('Infection Rate of Epidemic')
-xlabel('time (days)')
-ylabel('infection rate')
 
-legend('location', 'northeast')
+plot(Tmax * T, X(:, 2), 'k', 'LineWidth', 2)
+
+title('Infected Population vs. Delay', 'fontsize', 14)
+xlabel('time (days)')
+ylabel('infected')
+
+% legend('location', 'northeast')
 
 %% Functions
 function dydt = sir(t, y, p)

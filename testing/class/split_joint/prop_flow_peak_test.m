@@ -17,7 +17,7 @@ order = 2; %-1.2500
 order = 3; %-1.2500 
 order = 4; %-1.2500 
 order = 5; %-1.25;
-order = 6;
+order = 6;%-1.25;
 % d = order*2;
 
 %% system variables

@@ -1,11 +1,13 @@
 options = ddeset('AbsTol', 1e-10, 'RelTol', 1e-7);
 
 rng(4, 'twister');
-T = 10;
-Ntraj = 150;
+T = 8;
+% Ntraj = 150;
+Ntraj = 100;
 
-R0 = 0.3;
-C0 = [1; 0];
+R0 = 0.2;
+% C0 = [1; 0];
+C0 = [0.75; 0];
 
 xball = ball_sample(Ntraj, 2);
 xh0 = C0 + R0*xball';
@@ -15,13 +17,16 @@ Ntheta = 200;
 theta = linspace(0, 2*pi, Ntheta);
 
 %% sample
+% kappa = 0.7;
 kappa = 0.6;
 % kappa = 0.5;
+% kappa = 0.8;
 K0 = 1;
 K1 = 2;
 
-f_true = @(t, x, z) [x(2); -x(1) + (1/3).* x(1).^2 .* z(1) - z(2)];
-% f_true = @(t, x, z) [x(2); -x(1) + (1/3).* x(1).^3 - z(2)];
+% f_true = @(t, x, z) [x(2); -x(1) + (1/3).* x(1).^2 .* z(1) - z(2)];
+f_true = @(t, x, z) [x(2); -x(1) + (1/3).* x(1).^3 - z(2)];
+% f_true = @(t, x, z) [x(2); -z(1) + (1/3).* x(1).^3 - x(2)];
 
 
 for i = 1:Ntraj

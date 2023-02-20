@@ -46,9 +46,9 @@ if PLOT_TRAJ
     hold on
     plot([-tau, Tmax * sol.x], [xh0(2), sol.y(2, :)], 'DisplayName', 'Infection Rate', 'LineWidth', 2)
     
-    title('Infection Rate of Epidemic', 'FontSize', 16)
+    title('Infected Population of Epidemic', 'FontSize', 16)
     xlabel('time (days)')
-    ylabel('infection rate')
+    ylabel('infected')
     
     ylim([0, 0.6])
     plot([0, 0], ylim, ':k', 'LineWidth', 2)
@@ -200,7 +200,7 @@ if PLOT_TRAJ
 %         scatter(Mp_1(1, 2)*Tmax, Mp_1(1, 4), 300, 'or', 'DisplayName', 'recovered peak')
 %     end
     hold off
-    legend('location', 'west')
+%     legend('location', 'west')
 end
 
 if PLOT_NONNEG

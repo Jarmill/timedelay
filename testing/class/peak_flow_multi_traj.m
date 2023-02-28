@@ -12,10 +12,11 @@ C0 = [1.5; 0];
 R0 = 0.4;
 
 
-order = 1; %-1.2500 
-% order = 2; %-1.2230
-% order = 3; %-1.1937 
-% order = 4;  %-1.1751
+% order = 1; %-1.2500 , time: 0.7818 sec
+% order = 2; %-1.2230, time: 0.9914 sec
+% order = 3; %-1.1937 , time: 5.2708 sec
+% order = 4;  %-1.1751, time:  31.8847 sec
+order = 5;  %-1.1636, time:  336.5093  sec
 % d = order*2;
 
 %% system variables
@@ -50,4 +51,5 @@ sol = PM.run(order);
 mv_sys = double(PM.loc.sys{1}.meas_occ.mom_monom_marg(0, 2*order));
 [opt_term, mom_term, corner_term]=PM.loc.term.recover();
 
-[-sol.obj_rec, opt_term]
+
+[-sol.obj_rec, opt_term, sol.solver_time]

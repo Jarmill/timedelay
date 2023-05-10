@@ -65,6 +65,28 @@ ylabel('infected')
 
 
 
+%% plot
+
+figure(2)
+clf
+hold on
+c = linspecer(3);
+plot(Tmax * T, X(:, 2), 'LineWidth', 3, 'color', c(3, :))
+
+
+[mt, it] = max(X(:, 2));
+mt_list = mt + [0; 0.1; 0.2; 0.3];
+for i = 2:4
+    plot(xlim, mt_list(i)*[1, 1], 'k', 'LineWidth', 2)
+end
+plot(xlim, mt_list(1)*[1, 1], 'color', c(2, :), 'LineWidth', 2)
+
+scatter(T(it)*Tmax, mt, 300, 'k', 'filled')
+
+title('Minimal Peak Bound', 'fontsize', 14)
+xlabel('t')
+ylabel('p(t)')
+
 % legend('location', 'northeast')
 
 %% Functions

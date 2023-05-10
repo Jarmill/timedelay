@@ -63,6 +63,8 @@ title('Infected Population vs. Delay', 'fontsize', 14)
 xlabel('time (days)')
 ylabel('infected')
 
+
+
 % legend('location', 'northeast')
 
 %% Functions
